@@ -90,3 +90,82 @@ Kiro CLI には `Shift+Tab` でモードを切り替える機能がある。
 | 計画と実行 | 明確にモード分離 | 同一セッション内で混在 |
 | 安全性 | プランモードは書き込み不可 | ユーザーが都度判断 |
 | ワークフロー | 計画→承認→実行 | 自由形式 |
+
+## 設定ファイルの配置場所
+
+### ルール / 指示ファイル
+
+| 用途 | Kiro CLI | Claude Code |
+|---|---|---|
+| プロジェクトルール | `.kiro/steering/*.md` | `CLAUDE.md`（ルート） |
+| グローバルルール | `~/.kiro/steering/*.md` | `~/.claude/CLAUDE.md` |
+| サブディレクトリルール | `.kiro/steering/` 再帰読み込み | 各ディレクトリの `CLAUDE.md` |
+
+**Kiro の Steering ファイル例:**
+```markdown
+# .kiro/steering/coding-standards.md
+- snake_case を使う
+- public 関数にはドキュメントコメント必須
+- Result を返す（panic しない）
+```
+
+**Claude Code の CLAUDE.md 例:**
+```markdown
+# CLAUDE.md
+- snake_case を使う
+- public 関数にはドキュメントコメント必須
+```
+
+### MCP サーバー設定
+
+| スコープ | Kiro CLI | Claude Code |
+|---|---|---|
+| グローバル | `~/.kiro/settings/mcp.json` | `~/.claude/settings.json` |
+| プロジェクト | `.kiro/settings/mcp.json` | `.claude/settings.json` |
+| エージェント内 | `.kiro/agents/<name>.json` の `mcpServers` | — |
+
+### Skill（オンデマンド知識）
+
+| 用途 | Kiro CLI | Claude Code |
+|---|---|---|
+| スキル定義 | `.kiro/skills/**/SKILL.md` | なし（相当機能なし） |
+| 読み込み方式 | オンデマンド（`skill://`） | — |
+| 常時読み込み | `file://` リソース | `CLAUDE.md` に記載 |
+
+**Kiro の Skill ファイル例:**
+```markdown
+---
+name: dynamodb-data-modeling
+description: DynamoDB スキーマ設計のガイド
+---
+# DynamoDB データモデリング
+（必要な時だけコンテキストに読み込まれる）
+```
+
+### エージェント設定
+
+| スコープ | Kiro CLI | Claude Code |
+|---|---|---|
+| ローカル | `.kiro/agents/<name>.json` | — |
+| グローバル | `~/.kiro/agents/<name>.json` | — |
+| カスタムエージェント | JSON で tools, prompt, hooks 等定義 | なし（単一エージェント） |
+
+### ディレクトリ構造まとめ
+
+```
+# Kiro CLI
+.kiro/
+├── steering/          # ルール（常時コンテキスト）
+│   └── *.md
+├── skills/            # スキル（オンデマンド）
+│   └── **/SKILL.md
+├── agents/            # カスタムエージェント
+│   └── <name>.json
+└── settings/
+    └── mcp.json       # MCP サーバー設定
+
+# Claude Code
+.claude/
+├── settings.json      # MCP 等の設定
+CLAUDE.md              # ルール（プロジェクトルート）
+```
