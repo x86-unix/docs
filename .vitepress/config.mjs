@@ -15,7 +15,7 @@ export default defineConfig({
         text: 'AI',
         items: [
           { text: 'Gemini Deep Research', link: '/ai/gemini-deep-research' },
-          { text: 'Gemini Nano', link: '/ai/gemini-nano' },
+          { text: 'Gemini 画像生成', link: '/ai/gemini-nano' },
           { text: 'Gemini Gems', link: '/ai/gemini-gems' },
           { text: 'NotebookLM', link: '/ai/notebooklm' },
           { text: 'Kiro vs Claude Code CLI', link: '/ai/kiro-vs-claude-code' }
