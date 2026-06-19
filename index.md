@@ -8,6 +8,9 @@ hero:
       text: AI 勉強会資料
       link: /ai/
     - theme: alt
+      text: HTML サンプル
+      link: /sample.html
+    - theme: alt
       text: GitHub
       link: https://github.com/x86-unix/docs
 ---
