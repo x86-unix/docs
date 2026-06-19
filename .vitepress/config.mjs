@@ -3,8 +3,8 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 export default withMermaid(
   defineConfig({
-    title: 'My Docs',
-    description: 'A sample documentation site',
+    title: "x86-unix's Docs",
+    description: 'x86-unix の勉強会資料・技術メモ',
     base: '/docs/',
     themeConfig: {
       nav: [{ text: 'Home', link: '/' }],

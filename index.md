@@ -1,10 +1,13 @@
 ---
 layout: home
 hero:
-  name: My Docs
-  tagline: Sample documentation powered by VitePress
+  name: x86-unix's Docs
+  tagline: 勉強会資料・技術メモ
   actions:
     - theme: brand
-      text: Get Started
-      link: /guide/
+      text: AI 勉強会資料
+      link: /ai/
+    - theme: alt
+      text: GitHub
+      link: https://github.com/x86-unix/docs
 ---
