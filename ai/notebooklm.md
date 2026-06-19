@@ -10,12 +10,25 @@ NotebookLM は **RAG（Retrieval-Augmented Generation）** という技術で動
 
 ### RAG の仕組み
 
+```mermaid
+flowchart LR
+    A[ユーザーの質問] --> B[関連ドキュメントを検索]
+    B --> C[検索結果 + 質問を LLM に渡す]
+    C --> D[ソースに基づいた回答]
+    E[(アップロード済み\nドキュメント)] --> B
 ```
-通常のLLM:
-  ユーザーの質問 → LLM → 学習データから回答（古い・不正確な場合あり）
 
-RAG:
-  ユーザーの質問 → ①関連ドキュメントを検索 → ②検索結果+質問をLLMに渡す → 回答
+**通常の LLM との違い:**
+
+```mermaid
+flowchart TD
+    subgraph 通常のLLM
+        Q1[質問] --> LLM1[LLM] --> A1[回答\n※学習データのみ]
+    end
+    subgraph RAG（NotebookLM）
+        Q2[質問] --> Search[検索エンジン] --> LLM2[LLM] --> A2[回答\n※引用付き]
+        DB[(ユーザーの資料)] --> Search
+    end
 ```
 
 | 比較 | 通常のLLM | RAG（NotebookLM） |
