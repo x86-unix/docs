@@ -10,6 +10,14 @@ export default defineConfig({
       {
         text: 'Guide',
         items: [{ text: 'Getting Started', link: '/guide/' }]
+      },
+      {
+        text: 'AI',
+        items: [
+          { text: 'Gemini Deep Research', link: '/ai/gemini-deep-research' },
+          { text: 'Gemini Nano', link: '/ai/gemini-nano' },
+          { text: 'Gemini Gems', link: '/ai/gemini-gems' }
+        ]
       }
     ],
     editLink: {
