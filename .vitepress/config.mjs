@@ -11,6 +11,10 @@ export default defineConfig({
         text: 'Guide',
         items: [{ text: 'Getting Started', link: '/guide/' }]
       }
-    ]
+    ],
+    editLink: {
+      pattern: 'https://github.com/x86-unix/docs/edit/main/:path',
+      text: 'Edit this page on GitHub'
+    }
   }
 })
