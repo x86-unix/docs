@@ -249,11 +249,11 @@ graph LR
 
 ```mermaid
 graph TB
-    subgraph オンプレミス
+    subgraph "オンプレミス"
         DC[データセンター] --> HW1[物理サーバー]
         DC --> HW2[物理サーバー]
     end
-    subgraph クラウド
+    subgraph "クラウド"
         Internet[インターネット] --> AWS[AWS]
         Internet --> GCP[GCP]
     end
@@ -323,10 +323,10 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph スケールアップ（垂直）
+    subgraph "スケールアップ（垂直）"
         A1[サーバー] -->|パワーアップ| A2[強いサーバー]
     end
-    subgraph スケールアウト（水平）
+    subgraph "スケールアウト（水平）"
         B1[サーバー1]
         B2[サーバー2]
         B3[サーバー3]
@@ -1031,12 +1031,12 @@ rsync の同期イメージ:
 
 ```mermaid
 graph LR
-    subgraph サーバーA
+    subgraph "サーバーA"
         A1[ファイル1]
         A2[ファイル2]
         A3[ファイル3 ★新規]
     end
-    subgraph サーバーB
+    subgraph "サーバーB"
         B1[ファイル1]
         B2[ファイル2]
         B3[ファイル3 ← 同期]
@@ -1754,7 +1754,7 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph Forward Proxy
+    subgraph "Forward Proxy"
         Client[クライアント] --> FP[Proxy]
         FP --> Internet[インターネット]
     end
@@ -1762,7 +1762,7 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph Reverse Proxy
+    subgraph "Reverse Proxy"
         Internet2[インターネット] --> RP[Proxy]
         RP --> Server[内部サーバー]
     end
@@ -1790,19 +1790,19 @@ export no_proxy=localhost,127.0.0.1,.internal.example.com
 
 ```mermaid
 graph TB
-    subgraph SaaS
+    subgraph "SaaS"
         App2[アプリケーション]
         MW2[ミドルウェア]
         OS2[OS]
         Infra2[インフラ]
     end
-    subgraph PaaS
+    subgraph "PaaS"
         App1["アプリケーション - 自分で管理"]
         MW1[ミドルウェア]
         OS1[OS]
         Infra1[インフラ]
     end
-    subgraph IaaS
+    subgraph "IaaS"
         App0["アプリケーション - 自分で管理"]
         MW0["ミドルウェア - 自分で管理"]
         OS0["OS - 自分で管理"]
