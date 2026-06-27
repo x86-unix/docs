@@ -121,6 +121,25 @@ graph TB
 
 Unix の親戚に Linux（ubuntu/centosなど）がある。
 
+### ミドルウェア
+
+OSの上で動くソフト（OSが無いと動かない）。OSとアプリケーションの間に位置する。
+
+```mermaid
+graph TB
+    App[アプリケーション<br/>自社サービス/Webサイト] --> MW[ミドルウェア<br/>Apache/nginx/MySQL]
+    MW --> OS2[OS<br/>Linux/Windows]
+    OS2 --> HW2[ハードウェア]
+```
+
+| 種類 | 代表的なミドルウェア | 役割 |
+|------|---------------------|------|
+| Webサーバー | Apache, nginx | HTTPリクエストを受けてページを返す |
+| データベース | MySQL, MariaDB, PostgreSQL | データを保存・検索する |
+| キャッシュ | Redis, Memcached | 頻繁にアクセスされるデータを高速に返す |
+
+> 一般的に「ミドルウェア」と聞くと上記のようなサーバーソフトを指すことが多い。slack, word, zoom なども広義にはOSの上で動くソフトウェアだが、これらは「アプリケーション」と呼ばれることが多い。
+
 ### マウスの使い方
 
 - ダブルクリック → 単語選択
@@ -189,6 +208,12 @@ graph TB
 - **AWS** (Amazon Web Service)
 - **GCP** (Google Cloud Platform)
 - その他: Azure, Oracle Cloud, 国産(fujitsu, sakura, IDCF)
+
+#### 仮想マシン環境
+
+- Windows: WSL
+- Linux: vmware, vcenter, proxmox(OSS)
+- AWS/GCP: EC2
 
 ### IaC (Infrastructure as Code)
 
@@ -384,7 +409,7 @@ graph TD
 - playbookを流しておわりではなく、流した結果の動作を確認する
 - 既存サービスへの追加作業であれば、既存サービスに影響を与えていないことを確認する
 
-## スケールアップとスケールアウト
+### スケールアップとスケールアウト
 
 両方とも目的としては出力を上げること。
 
@@ -405,12 +430,9 @@ graph LR
 | スケールアップ | Aさんがキントレしてパワーアップ | 垂直スケール |
 | スケールアウト | Bさんという仲間を増やす | 水平スケール |
 
-## インフラエンジニアがよく使うツール
-
-- **Linux OS**: 仮想での環境が多い
-- **Terminal**: Linuxを操作するための入力する道具（黒い画面）。シェル(貝)ともいう
-
 ## Linux 基本コマンド
+
+インフラエンジニアが日常的に使うのは Linux OS（仮想環境が多い）と Terminal（黒い画面。シェルともいう）。
 
 ### よく使う最初のコマンド
 
@@ -484,6 +506,27 @@ uid=1000(unixadmin) gid=1000(unixadmin) groups=1000(unixadmin),4(adm),27(sudo)
 | `uid` | ユーザーID（ユーザーを識別するシステム内部の番号） |
 | `gid` | プライマリグループID |
 | `groups` | 所属している全グループ |
+
+### ヒアドキュメント
+
+標準入力を使って複数行をファイルに書き込む方法。設定ファイルを作るときに便利。
+
+```bash
+# 上書き（既存の内容は消える）
+cat > fukusugyo.txt << 'EOF'
+1行目の内容
+2行目の内容
+EOF
+
+# 追記（既存の内容の後ろに追加）
+cat >> fukusugyo.txt << 'EOF'
+追加する内容
+EOF
+```
+
+::: warning 注意
+`>` が1個だと**上書き**、`>>` だと**追記**。上書きすると元の内容が消えるので注意！
+:::
 
 ## ネットワーク調査コマンド
 
@@ -718,14 +761,358 @@ sftp ubuntu@192.168.1.100
 - **WinSCP**: ftp, sftp, ftps どれでも利用可能
 - **FFFTP**: ftp, sftp, ftps どれでも利用可能
 
-## クラウド環境
+## サービス・プロセス管理
 
-### なぜクラウドというのか？
+### netstat: ネットワーク接続の確認
 
-自宅や会社には設備(物理のマシン)は無いが、インターネット上のどこかで用意されたものを仮想的に利用する環境。インターネット = 雲(クラウド)で表現されることが慣例的にある。
+サーバーで「どのポートが開いているか」「誰が接続しているか」を確認する。
 
-- **AWS** (Amazon Web Service): 買い物のAmazonとは会社は同じだがサービスは別
-- **GCP** (Google Cloud Platform): Googleが同じようなサービスをやっているもの
+```bash
+# 基本: リッスンしているTCPポートを表示
+netstat -ltpn
+
+# UDP も含める
+netstat -ltupn
+
+# 確立済み接続も含めて全て表示
+netstat -ltupna
+```
+
+| オプション | 意味 |
+|-----------|------|
+| `-l` | LISTEN状態のソケットのみ |
+| `-t` | TCPのみ |
+| `-u` | UDPも表示 |
+| `-p` | PID/プログラム名を表示 |
+| `-n` | ホスト名・ポート名を数値で表示 |
+| `-a` | 全ての接続を表示（ESTABLISHEDなども） |
+
+::: warning 一般ユーザ vs root
+一般ユーザで実行すると、自分が起動したプロセスしかPID/Program nameが見えない。全プロセスを見るには `sudo` が必要。
+:::
+
+#### 出力の読み方
+
+```
+Proto Recv-Q Send-Q Local Address       Foreign Address     State       PID/Program name
+tcp        0      0 0.0.0.0:80          0.0.0.0:*           LISTEN      1365/apache2
+tcp        0      0 127.0.0.1:3306      0.0.0.0:*           LISTEN      1546/mysqld
+tcp        0      0 0.0.0.0:22          0.0.0.0:*           LISTEN      1023/sshd
+```
+
+| 項目 | 意味 |
+|------|------|
+| `Proto` | プロトコル (tcp/udp) |
+| `Recv-Q` | 受信キュー（通常0。非ゼロが続くとアプリに問題あり） |
+| `Send-Q` | 送信キュー（通常0。非ゼロが続くと送信側に遅延あり） |
+| `Local Address` | 待ち受けアドレス:ポート |
+| `Foreign Address` | 接続元（LISTEN時は `*`） |
+| `State` | ソケットの状態 |
+| `PID/Program name` | プロセスIDとプログラム名 |
+
+#### Local Address の読み方
+
+| 表示 | 意味 |
+|------|------|
+| `0.0.0.0:80` | 全インターフェースのport 80で待ち受け（外部からアクセス可能） |
+| `127.0.0.1:3306` | ローカルホストのみ。外部からはアクセス不可 |
+| `:::80` | IPv6の全インターフェース |
+
+#### State の種類
+
+| State | 意味 |
+|-------|------|
+| `LISTEN` | 接続を待っている |
+| `ESTABLISHED` | 通信中（3ウェイハンドシェイク完了） |
+| `SYN_SENT` | 接続要求送信中 |
+| `CLOSE_WAIT` | クローズ待ち |
+| `TIME_WAIT` | 接続終了後の待機 |
+
+### lsof: ファイル/ポートを使っているプロセスの特定
+
+「このファイル/ポートを使っているのは誰？」を調べる。
+
+```bash
+# 特定のファイルを開いているプロセスを表示
+sudo lsof /var/log/apache2/access.log
+
+# 特定のポートを使っているプロセスを表示
+sudo lsof -i :80
+# COMMAND     PID     USER   FD   TYPE   DEVICE SIZE/OFF NODE NAME
+# apache2  316077 www-data    4u  IPv6 52882782      0t0  TCP *:http (LISTEN)
+
+# 特定プロセスが開いている全ファイル
+sudo lsof -p PID
+```
+
+> `sudo` をつけないと一般ユーザが確認できる範囲は限られる。
+
+### ps: プロセスの確認
+
+#### ps auxw — リソース使用率を確認
+
+```bash
+ps auxww    # ww で長いコマンドも切れない
+```
+
+| カラム | 意味 |
+|--------|------|
+| `USER` | プロセスの所有者 |
+| `PID` | プロセスID |
+| `%CPU` | CPU使用率 |
+| `%MEM` | メモリ使用率 |
+| `VSZ` | 仮想メモリサイズ |
+| `RSS` | 実メモリ使用量 |
+| `STAT` | プロセスの状態 |
+| `START` | 開始時刻 |
+| `TIME` | CPU使用時間累計 |
+| `COMMAND` | 実行コマンド |
+
+#### ps -ef — 親子関係を確認
+
+```bash
+ps -ef
+```
+
+| カラム | 意味 |
+|--------|------|
+| `UID` | 所有者 |
+| `PID` | プロセスID |
+| `PPID` | **親プロセスID** |
+| `C` | CPU使用率 |
+| `STIME` | 開始時刻 |
+| `CMD` | 実行コマンド |
+
+#### pstree: プロセスのツリー表示
+
+```bash
+# インストール
+apt install psmisc
+
+# 特定PIDの子プロセスをツリー表示
+pstree -p 3449791
+# apache2(3449791)─┬─apache2(316077)─┬─{apache2}(316080)
+#                  │                 ├─{apache2}(316082)
+```
+
+## パーミッション（ファイル権限）
+
+### ファイルの見方
+
+```bash
+ls -l
+# drwxr-xr-x  17 unixadmin unixadmin   4096 May  1 16:15 myproject
+# -rw-r--r--   1 unixadmin unixadmin     54 May 16 11:27 helloworld.py
+```
+
+#### パーミッション文字列の読み方
+
+```
+d rwx r-x r-x
+│  │   │   └── その他ユーザーの権限
+│  │   └────── グループの権限
+│  └────────── 所有者の権限
+└───────────── ファイルタイプ (d=ディレクトリ, -=通常ファイル)
+```
+
+| 文字 | 意味 | 数値 |
+|------|------|------|
+| `r` | 読み取り (read) | 4 |
+| `w` | 書き込み (write) | 2 |
+| `x` | 実行 (execute) | 1 |
+| `-` | 権限なし | 0 |
+
+#### 数値表現
+
+各桁を足し算する:
+- `rwx` = 4+2+1 = **7**
+- `r-x` = 4+0+1 = **5**
+- `r--` = 4+0+0 = **4**
+
+よく見るパターン:
+| 数値 | 文字 | 用途 |
+|------|------|------|
+| `755` | `rwxr-xr-x` | 実行ファイル、ディレクトリ |
+| `644` | `rw-r--r--` | 一般的なファイル |
+| `600` | `rw-------` | 秘密鍵など機密ファイル |
+| `777` | `rwxrwxrwx` | 全員全権限（基本使わない。セキュリティリスク） |
+
+### chmod: 権限の変更
+
+```bash
+# 数値指定（絶対値）
+chmod 755 script.sh      # rwxr-xr-x
+chmod 644 config.txt     # rw-r--r--
+
+# 記号指定（相対値）
+chmod g+r hoge           # グループに読み取り権限を追加
+chmod o-w hoge           # その他ユーザーから書き込み権限を削除
+chmod u+x script.sh      # 所有者に実行権限を追加
+```
+
+| 対象 | 意味 |
+|------|------|
+| `u` | 所有者 (user) |
+| `g` | グループ (group) |
+| `o` | その他 (other) |
+| `a` | 全員 (all) |
+
+`+` で追加、`-` で削除。
+
+### chown: 所有者・グループの変更
+
+```bash
+# 所有者を変更
+sudo chown newuser file.txt
+
+# グループを変更
+sudo chown :newgroup file.txt
+
+# 所有者とグループを同時に変更
+sudo chown newuser:newgroup file.txt
+
+# ディレクトリ以下を再帰的に変更
+sudo chown -R newuser:newgroup /path/to/dir
+```
+
+::: warning 注意
+一般ユーザーは他人のファイルの所有者を変更できない（root/sudo が必要）。これはセキュリティ上の理由。自分のファイルの所有者を他人に変更されると、そのファイルを削除・変更されてしまうため。
+:::
+
+### ファイルシステムへの書き込みテスト
+
+「書き込めるかどうか」を確認するシンプルな方法:
+
+```bash
+touch hoge.txt    # 空ファイルを作成してみる
+# 成功すればファイルシステムは書き込み可能
+# "Read-only file system" エラーが出れば書き込み不可
+```
+
+## sudo: 管理者権限の実行
+
+### sudo が使える条件
+
+`/etc/sudoers` ファイルの設定による。
+
+```bash
+# 自分がどのコマンドをsudoで実行できるか確認
+sudo -l
+```
+
+#### /etc/sudoers の書式
+
+```
+user(または %group)  host=(runas_users:runas_groups)  commands
+```
+
+#### 設定例
+
+```bash
+# rootは全て実行可能
+root    ALL=(ALL:ALL) ALL
+
+# sudoグループのメンバーは全コマンド実行可能
+%sudo   ALL=(ALL:ALL) ALL
+
+# user1にパスワードなしで全コマンドを許可
+user1   ALL=(ALL) NOPASSWD: ALL
+
+# user1にApacheの再起動だけを許可
+user1 ALL=(root) NOPASSWD: /usr/sbin/service apache2 restart
+
+# user2にログの閲覧だけを許可
+user2 ALL=(root) NOPASSWD: /usr/bin/tail /var/log/*
+```
+
+## ログの見方
+
+### 便利なコマンド
+
+#### less: ファイルの閲覧
+
+```bash
+less /var/log/syslog
+less -S /var/log/syslog    # -S: 長い行を改行しない
+less -N /var/log/syslog    # -N: 行番号を表示
+```
+
+#### tail: ファイル末尾の表示
+
+```bash
+tail filename       # デフォルトで最後の10行を表示
+tail -f filename    # リアルタイムでファイルの更新を表示（ログ監視に必須）
+tail -n 50 filename # 最後の50行を表示
+```
+
+#### grep: パターン検索
+
+```bash
+grep 'error' /var/log/syslog           # errorを含む行を表示
+grep -i 'error' /var/log/syslog        # 大文字小文字を区別しない
+grep -r 'pattern' /path/to/dir         # サブディレクトリも含めて再帰検索
+grep -c 'error' /var/log/syslog        # マッチした行数を表示
+grep -v 'debug' /var/log/syslog        # debugを含まない行を表示
+```
+
+#### awk: テキスト処理
+
+フィールド（列）を指定して抽出・加工するコマンド。ログ解析に強い。
+
+```bash
+# 特定フィールドを抽出（apacheアクセスログからIPとステータスコード）
+awk '{print $1, $9}' access.log
+# 172.24.192.1 200
+# 172.24.192.1 404
+
+# 条件でフィルタリング（ステータスコード200の行のみ）
+awk '$9 == 200 {print $0}' access.log
+
+# 合計を算出（レスポンスサイズの合計）
+awk '{sum += $10} END {print sum}' access.log
+
+# 区切り文字を変更（CSV処理）
+awk -F',' '{print $2}' data.csv
+# -F: フィールド区切り文字（デフォルトはスペース/タブ）
+```
+
+### 便利なシェル操作（ターミナルショートカットキー）
+
+ターミナルのショートカットキーはデフォルトで **emacs のキーバインド**と同じ。覚えればemacsでもそのまま使える。
+
+#### カーソル移動
+
+| キー | 動作 | 備考 |
+|------|------|------|
+| `Ctrl + b` | ←（左に1文字移動） | 矢印キー←と同じ |
+| `Ctrl + f` | →（右に1文字移動） | 矢印キー→と同じ |
+| `Ctrl + a` | 行頭に移動 | 長いコマンドの先頭に戻る |
+| `Ctrl + e` | 行末に移動 | 行頭で修正後に行末に戻る |
+| `Ctrl + p` | 一つ前の履歴 | 矢印キー↑と同じ |
+| `Ctrl + n` | 一つ後の履歴 | 矢印キー↓と同じ |
+
+#### 文字列削除
+
+| キー | 動作 | 備考 |
+|------|------|------|
+| `Ctrl + d` | カーソル位置の文字を削除 | Deleteキーと同じ。空行で押すとログアウト |
+| `Ctrl + h` | カーソルの1文字前を削除 | Backspaceと同じ |
+| `Ctrl + u` | 行頭まで削除 | カーソルから左を全削除 |
+| `Ctrl + k` | 行末まで削除 | カーソルから右を全削除 |
+| `Ctrl + w` | 単語単位で左を削除 | スペース区切りで1単語消す |
+| `Ctrl + y` | 削除した文字列を貼り付け (yank) | Ctrl+k/u で消したものを戻す |
+
+#### その他
+
+| キー | 動作 | 備考 |
+|------|------|------|
+| `Ctrl + c` | 実行中のコマンドを中断 | 強制終了 |
+| `Ctrl + r` | コマンド履歴を検索 | 文字入力で部分一致検索。Enter で実行、Esc で編集モード |
+| `Ctrl + l` | 画面クリア | ターミナルをリセットして見やすくする |
+
+::: tip Ctrl + d の多段ログアウト
+ssh接続、mysql接続、docker exec 等、多段で接続しているものを終了するとき、`exit` を連打しなくても `Ctrl + d` で1段ずつ抜けられる。
+:::
 
 ## Linuxの種類（ディストリビューション）
 
@@ -804,6 +1191,21 @@ graph LR
 |------|------|------|
 | インタプリタ | ビルド不要。逐次翻訳しながら実行。遅いがプログラミングしやすい | python, bash, php |
 | コンパイラ | 先にビルドして機械語に翻訳。速度が速い | c, java |
+
+### プログラミング言語の種類
+
+| 言語 | 特徴 |
+|------|------|
+| C言語 | 難しい。apache, nginx, MariaDB等はこれで書かれている |
+| HTML | ホームページ作成に特化 |
+| Python | 何でもできる。HP、アプリ、ゲーム、バッチ |
+| PHP | HP作成が得意、バッチ |
+| Ruby | 日本人作者。優しいとされている |
+| shell-script | shell操作に特化。インフラエンジニア向け |
+| Java | 何でもできる |
+| Go | 何でもできる |
+| JavaScript | - |
+| C# | ゲーム、web、スマホアプリなど何でも |
 
 ### 変数
 
@@ -1163,74 +1565,6 @@ reg import caps.reg
 - 自宅で1万円程度のノートパソコンを買う（アマゾン整備品、メモリ8GB程度）
 - Linuxをインストールする
 
-## OS まとめ
-
-OSはハードウェアを管理し、アプリケーションがハードウェアを効率的に安全に利用できるように制御するソフトウェア。
-
-- **Windows** / **Mac** (ベースBSD)
-- **Linux**: コマンドでやりたいことを命令する
-
-### ミドルウェア
-
-OSの上で動くソフト（OSが無いと動かない）。OSとアプリケーションの間に位置する。
-
-```mermaid
-graph TB
-    App[アプリケーション<br/>自社サービス/Webサイト] --> MW[ミドルウェア<br/>Apache/nginx/MySQL]
-    MW --> OS2[OS<br/>Linux/Windows]
-    OS2 --> HW2[ハードウェア]
-```
-
-| 種類 | 代表的なミドルウェア | 役割 |
-|------|---------------------|------|
-| Webサーバー | Apache, nginx | HTTPリクエストを受けてページを返す |
-| データベース | MySQL, MariaDB, PostgreSQL | データを保存・検索する |
-| キャッシュ | Redis, Memcached | 頻繁にアクセスされるデータを高速に返す |
-
-> 一般的に「ミドルウェア」と聞くと上記のようなサーバーソフトを指すことが多い。slack, word, zoom なども広義にはOSの上で動くソフトウェアだが、これらは「アプリケーション」と呼ばれることが多い。
-
-### 仮想マシン環境
-
-- Windows: WSL
-- Linux: vmware, vcenter, proxmox(OSS)
-- AWS/GCP: EC2
-
-### ヒアドキュメント
-
-標準入力を使って複数行をファイルに書き込む方法。設定ファイルを作るときに便利。
-
-```bash
-# 上書き（既存の内容は消える）
-cat > fukusugyo.txt << 'EOF'
-1行目の内容
-2行目の内容
-EOF
-
-# 追記（既存の内容の後ろに追加）
-cat >> fukusugyo.txt << 'EOF'
-追加する内容
-EOF
-```
-
-::: warning 注意
-`>` が1個だと**上書き**、`>>` だと**追記**。上書きすると元の内容が消えるので注意！
-:::
-
-## プログラミング言語の種類
-
-| 言語 | 特徴 |
-|------|------|
-| C言語 | 難しい。apache, nginx, MariaDB等はこれで書かれている |
-| HTML | ホームページ作成に特化 |
-| Python | 何でもできる。HP、アプリ、ゲーム、バッチ |
-| PHP | HP作成が得意、バッチ |
-| Ruby | 日本人作者。優しいとされている |
-| shell-script | shell操作に特化。インフラエンジニア向け |
-| Java | 何でもできる |
-| Go | 何でもできる |
-| JavaScript | - |
-| C# | ゲーム、web、スマホアプリなど何でも |
-
 ## IDE とエディタ
 
 ### IDE (Integrated Development Environment)
@@ -1399,355 +1733,3 @@ IaaSは自由度が高いが全部自分でやる必要がある。SaaSは簡単
 - タダで使えるもの
 - LinuxというOSがOSSに親和性が高い
 
-## サービス・プロセス管理
-
-### netstat: ネットワーク接続の確認
-
-サーバーで「どのポートが開いているか」「誰が接続しているか」を確認する。
-
-```bash
-# 基本: リッスンしているTCPポートを表示
-netstat -ltpn
-
-# UDP も含める
-netstat -ltupn
-
-# 確立済み接続も含めて全て表示
-netstat -ltupna
-```
-
-| オプション | 意味 |
-|-----------|------|
-| `-l` | LISTEN状態のソケットのみ |
-| `-t` | TCPのみ |
-| `-u` | UDPも表示 |
-| `-p` | PID/プログラム名を表示 |
-| `-n` | ホスト名・ポート名を数値で表示 |
-| `-a` | 全ての接続を表示（ESTABLISHEDなども） |
-
-::: warning 一般ユーザ vs root
-一般ユーザで実行すると、自分が起動したプロセスしかPID/Program nameが見えない。全プロセスを見るには `sudo` が必要。
-:::
-
-#### 出力の読み方
-
-```
-Proto Recv-Q Send-Q Local Address       Foreign Address     State       PID/Program name
-tcp        0      0 0.0.0.0:80          0.0.0.0:*           LISTEN      1365/apache2
-tcp        0      0 127.0.0.1:3306      0.0.0.0:*           LISTEN      1546/mysqld
-tcp        0      0 0.0.0.0:22          0.0.0.0:*           LISTEN      1023/sshd
-```
-
-| 項目 | 意味 |
-|------|------|
-| `Proto` | プロトコル (tcp/udp) |
-| `Recv-Q` | 受信キュー（通常0。非ゼロが続くとアプリに問題あり） |
-| `Send-Q` | 送信キュー（通常0。非ゼロが続くと送信側に遅延あり） |
-| `Local Address` | 待ち受けアドレス:ポート |
-| `Foreign Address` | 接続元（LISTEN時は `*`） |
-| `State` | ソケットの状態 |
-| `PID/Program name` | プロセスIDとプログラム名 |
-
-#### Local Address の読み方
-
-| 表示 | 意味 |
-|------|------|
-| `0.0.0.0:80` | 全インターフェースのport 80で待ち受け（外部からアクセス可能） |
-| `127.0.0.1:3306` | ローカルホストのみ。外部からはアクセス不可 |
-| `:::80` | IPv6の全インターフェース |
-
-#### State の種類
-
-| State | 意味 |
-|-------|------|
-| `LISTEN` | 接続を待っている |
-| `ESTABLISHED` | 通信中（3ウェイハンドシェイク完了） |
-| `SYN_SENT` | 接続要求送信中 |
-| `CLOSE_WAIT` | クローズ待ち |
-| `TIME_WAIT` | 接続終了後の待機 |
-
-### lsof: ファイル/ポートを使っているプロセスの特定
-
-「このファイル/ポートを使っているのは誰？」を調べる。
-
-```bash
-# 特定のファイルを開いているプロセスを表示
-sudo lsof /var/log/apache2/access.log
-
-# 特定のポートを使っているプロセスを表示
-sudo lsof -i :80
-# COMMAND     PID     USER   FD   TYPE   DEVICE SIZE/OFF NODE NAME
-# apache2  316077 www-data    4u  IPv6 52882782      0t0  TCP *:http (LISTEN)
-
-# 特定プロセスが開いている全ファイル
-sudo lsof -p PID
-```
-
-> `sudo` をつけないと一般ユーザが確認できる範囲は限られる。
-
-### ps: プロセスの確認
-
-#### ps auxw — リソース使用率を確認
-
-```bash
-ps auxww    # ww で長いコマンドも切れない
-```
-
-| カラム | 意味 |
-|--------|------|
-| `USER` | プロセスの所有者 |
-| `PID` | プロセスID |
-| `%CPU` | CPU使用率 |
-| `%MEM` | メモリ使用率 |
-| `VSZ` | 仮想メモリサイズ |
-| `RSS` | 実メモリ使用量 |
-| `STAT` | プロセスの状態 |
-| `START` | 開始時刻 |
-| `TIME` | CPU使用時間累計 |
-| `COMMAND` | 実行コマンド |
-
-#### ps -ef — 親子関係を確認
-
-```bash
-ps -ef
-```
-
-| カラム | 意味 |
-|--------|------|
-| `UID` | 所有者 |
-| `PID` | プロセスID |
-| `PPID` | **親プロセスID** |
-| `C` | CPU使用率 |
-| `STIME` | 開始時刻 |
-| `CMD` | 実行コマンド |
-
-#### pstree: プロセスのツリー表示
-
-```bash
-# インストール
-apt install psmisc
-
-# 特定PIDの子プロセスをツリー表示
-pstree -p 3449791
-# apache2(3449791)─┬─apache2(316077)─┬─{apache2}(316080)
-#                  │                 ├─{apache2}(316082)
-```
-
-## パーミッション（ファイル権限）
-
-### ファイルの見方
-
-```bash
-ls -l
-# drwxr-xr-x  17 unixadmin unixadmin   4096 May  1 16:15 myproject
-# -rw-r--r--   1 unixadmin unixadmin     54 May 16 11:27 helloworld.py
-```
-
-#### パーミッション文字列の読み方
-
-```
-d rwx r-x r-x
-│  │   │   └── その他ユーザーの権限
-│  │   └────── グループの権限
-│  └────────── 所有者の権限
-└───────────── ファイルタイプ (d=ディレクトリ, -=通常ファイル)
-```
-
-| 文字 | 意味 | 数値 |
-|------|------|------|
-| `r` | 読み取り (read) | 4 |
-| `w` | 書き込み (write) | 2 |
-| `x` | 実行 (execute) | 1 |
-| `-` | 権限なし | 0 |
-
-#### 数値表現
-
-各桁を足し算する:
-- `rwx` = 4+2+1 = **7**
-- `r-x` = 4+0+1 = **5**
-- `r--` = 4+0+0 = **4**
-
-よく見るパターン:
-| 数値 | 文字 | 用途 |
-|------|------|------|
-| `755` | `rwxr-xr-x` | 実行ファイル、ディレクトリ |
-| `644` | `rw-r--r--` | 一般的なファイル |
-| `600` | `rw-------` | 秘密鍵など機密ファイル |
-| `777` | `rwxrwxrwx` | 全員全権限（基本使わない。セキュリティリスク） |
-
-### chmod: 権限の変更
-
-```bash
-# 数値指定（絶対値）
-chmod 755 script.sh      # rwxr-xr-x
-chmod 644 config.txt     # rw-r--r--
-
-# 記号指定（相対値）
-chmod g+r hoge           # グループに読み取り権限を追加
-chmod o-w hoge           # その他ユーザーから書き込み権限を削除
-chmod u+x script.sh      # 所有者に実行権限を追加
-```
-
-| 対象 | 意味 |
-|------|------|
-| `u` | 所有者 (user) |
-| `g` | グループ (group) |
-| `o` | その他 (other) |
-| `a` | 全員 (all) |
-
-`+` で追加、`-` で削除。
-
-### chown: 所有者・グループの変更
-
-```bash
-# 所有者を変更
-sudo chown newuser file.txt
-
-# グループを変更
-sudo chown :newgroup file.txt
-
-# 所有者とグループを同時に変更
-sudo chown newuser:newgroup file.txt
-
-# ディレクトリ以下を再帰的に変更
-sudo chown -R newuser:newgroup /path/to/dir
-```
-
-::: warning 注意
-一般ユーザーは他人のファイルの所有者を変更できない（root/sudo が必要）。これはセキュリティ上の理由。自分のファイルの所有者を他人に変更されると、そのファイルを削除・変更されてしまうため。
-:::
-
-### ファイルシステムへの書き込みテスト
-
-「書き込めるかどうか」を確認するシンプルな方法:
-
-```bash
-touch hoge.txt    # 空ファイルを作成してみる
-# 成功すればファイルシステムは書き込み可能
-# "Read-only file system" エラーが出れば書き込み不可
-```
-
-## sudo: 管理者権限の実行
-
-### sudo が使える条件
-
-`/etc/sudoers` ファイルの設定による。
-
-```bash
-# 自分がどのコマンドをsudoで実行できるか確認
-sudo -l
-```
-
-#### /etc/sudoers の書式
-
-```
-user(または %group)  host=(runas_users:runas_groups)  commands
-```
-
-#### 設定例
-
-```bash
-# rootは全て実行可能
-root    ALL=(ALL:ALL) ALL
-
-# sudoグループのメンバーは全コマンド実行可能
-%sudo   ALL=(ALL:ALL) ALL
-
-# user1にパスワードなしで全コマンドを許可
-user1   ALL=(ALL) NOPASSWD: ALL
-
-# user1にApacheの再起動だけを許可
-user1 ALL=(root) NOPASSWD: /usr/sbin/service apache2 restart
-
-# user2にログの閲覧だけを許可
-user2 ALL=(root) NOPASSWD: /usr/bin/tail /var/log/*
-```
-
-## ログの見方
-
-### 便利なコマンド
-
-#### less: ファイルの閲覧
-
-```bash
-less /var/log/syslog
-less -S /var/log/syslog    # -S: 長い行を改行しない
-less -N /var/log/syslog    # -N: 行番号を表示
-```
-
-#### tail: ファイル末尾の表示
-
-```bash
-tail filename       # デフォルトで最後の10行を表示
-tail -f filename    # リアルタイムでファイルの更新を表示（ログ監視に必須）
-tail -n 50 filename # 最後の50行を表示
-```
-
-#### grep: パターン検索
-
-```bash
-grep 'error' /var/log/syslog           # errorを含む行を表示
-grep -i 'error' /var/log/syslog        # 大文字小文字を区別しない
-grep -r 'pattern' /path/to/dir         # サブディレクトリも含めて再帰検索
-grep -c 'error' /var/log/syslog        # マッチした行数を表示
-grep -v 'debug' /var/log/syslog        # debugを含まない行を表示
-```
-
-#### awk: テキスト処理
-
-フィールド（列）を指定して抽出・加工するコマンド。ログ解析に強い。
-
-```bash
-# 特定フィールドを抽出（apacheアクセスログからIPとステータスコード）
-awk '{print $1, $9}' access.log
-# 172.24.192.1 200
-# 172.24.192.1 404
-
-# 条件でフィルタリング（ステータスコード200の行のみ）
-awk '$9 == 200 {print $0}' access.log
-
-# 合計を算出（レスポンスサイズの合計）
-awk '{sum += $10} END {print sum}' access.log
-
-# 区切り文字を変更（CSV処理）
-awk -F',' '{print $2}' data.csv
-# -F: フィールド区切り文字（デフォルトはスペース/タブ）
-```
-
-### 便利なシェル操作（ターミナルショートカットキー）
-
-ターミナルのショートカットキーはデフォルトで **emacs のキーバインド**と同じ。覚えればemacsでもそのまま使える。
-
-#### カーソル移動
-
-| キー | 動作 | 備考 |
-|------|------|------|
-| `Ctrl + b` | ←（左に1文字移動） | 矢印キー←と同じ |
-| `Ctrl + f` | →（右に1文字移動） | 矢印キー→と同じ |
-| `Ctrl + a` | 行頭に移動 | 長いコマンドの先頭に戻る |
-| `Ctrl + e` | 行末に移動 | 行頭で修正後に行末に戻る |
-| `Ctrl + p` | 一つ前の履歴 | 矢印キー↑と同じ |
-| `Ctrl + n` | 一つ後の履歴 | 矢印キー↓と同じ |
-
-#### 文字列削除
-
-| キー | 動作 | 備考 |
-|------|------|------|
-| `Ctrl + d` | カーソル位置の文字を削除 | Deleteキーと同じ。空行で押すとログアウト |
-| `Ctrl + h` | カーソルの1文字前を削除 | Backspaceと同じ |
-| `Ctrl + u` | 行頭まで削除 | カーソルから左を全削除 |
-| `Ctrl + k` | 行末まで削除 | カーソルから右を全削除 |
-| `Ctrl + w` | 単語単位で左を削除 | スペース区切りで1単語消す |
-| `Ctrl + y` | 削除した文字列を貼り付け (yank) | Ctrl+k/u で消したものを戻す |
-
-#### その他
-
-| キー | 動作 | 備考 |
-|------|------|------|
-| `Ctrl + c` | 実行中のコマンドを中断 | 強制終了 |
-| `Ctrl + r` | コマンド履歴を検索 | 文字入力で部分一致検索。Enter で実行、Esc で編集モード |
-| `Ctrl + l` | 画面クリア | ターミナルをリセットして見やすくする |
-
-::: tip Ctrl + d の多段ログアウト
-ssh接続、mysql接続、docker exec 等、多段で接続しているものを終了するとき、`exit` を連打しなくても `Ctrl + d` で1段ずつ抜けられる。
-:::
