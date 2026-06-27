@@ -264,6 +264,51 @@ ssh -i ~/.ssh/my_key.pem ubuntu@192.168.1.100
 パスワードよりも安全で、自動化にも向いている。
 :::
 
+#### SSHキーペアの作成
+
+```bash
+# 一般ユーザで実行
+ssh-keygen
+
+# 対話的に以下を聞かれる:
+# 1. ファイル保存場所（デフォルト: ~/.ssh/id_rsa）
+# 2. パスフレーズ（キーペアに付与するパスワード。空Enterでなしも可）
+# 3. パスフレーズの確認
+```
+
+生成されるファイル:
+| ファイル | 種類 | 扱い |
+|---------|------|------|
+| `~/.ssh/id_rsa` | 秘密鍵 (プライベートキー) | 自分だけの秘密。外部に漏らさない |
+| `~/.ssh/id_rsa.pub` | 公開鍵 (パブリックキー) | SSH接続したいサーバーやGitHubに置く |
+
+#### ~/.ssh/config の活用
+
+SSH接続を便利にする設定ファイル。毎回長いコマンドを打たなくてよくなる。
+
+```bash
+# ~/.ssh/config に以下を記載
+Host my-server
+  User ubuntu
+  HostName 192.168.1.100
+  IdentityFile ~/.ssh/my_key.pem
+```
+
+設定すると:
+
+```bash
+# before: 毎回これを打っていた
+ssh -i ~/.ssh/my_key.pem ubuntu@192.168.1.100
+
+# after: これだけでよい
+ssh my-server
+```
+
+メリット:
+- `Tab` キーでホスト名を補完できる（これだけで価値がある）
+- プロキシ経由の設定も書ける
+- ユーザ名・鍵の指定を自動化できる
+
 ### WSL (Windows Subsystem for Linux)
 
 WindowsのPC上でLinuxを動かす仕組み。これを使えば、Windowsから離れることなくLinuxのコマンドやSSH接続ができる。
@@ -349,26 +394,7 @@ graph TD
 - playbookを流しておわりではなく、流した結果の動作を確認する
 - 既存サービスへの追加作業であれば、既存サービスに影響を与えていないことを確認する
 
-## 命名規則
-
-### Host Domain Name Rule
-
-例: `wbb0102a`（本番 b2b サイト用 web サーバ1番最初につくった、2号機）
-
-命名規則を分解すると:
-
-```
-w   bb   01   02   a
-│    │    │    │   └── サブ識別子（a=1号機, b=2号機...）
-│    │    │    └────── 連番（02=2台目）
-│    │    └─────────── グループ番号（01=最初に作った組）
-│    └──────────────── サービス名（bb=b2b）
-└───────────────────── 役割（w=web）
-```
-
-> ホスト名を見ただけで「何のサーバーか」がわかるようにするのが命名規則の目的。チーム内で統一ルールを決めておくことで、障害対応時に素早く対象を特定できる。
-
-### スケールアップとスケールアウト
+## スケールアップとスケールアウト
 
 両方とも目的としては出力を上げること。
 
@@ -393,6 +419,256 @@ graph LR
 
 - **Linux OS**: 仮想での環境が多い
 - **Terminal**: Linuxを操作するための入力する道具（黒い画面）。シェル(貝)ともいう
+
+## Linux 基本コマンド
+
+### よく使う最初のコマンド
+
+```bash
+pwd          # 今いる場所（カレントディレクトリ）を表示
+cd hoge/fuga # ディレクトリ移動
+cd           # 引数なしでホームディレクトリに戻る
+```
+
+#### ファイル一覧: ls -ltr
+
+```bash
+ls -ltr
+```
+
+| オプション | 意味 |
+|-----------|------|
+| `-l` | 詳細表示 |
+| `-t` | 最終更新日時順（降順） |
+| `-r` | ソート順を逆にする |
+
+::: tip なぜ `ll` ではなく `ls -ltr` か
+- `ll` はエイリアスであり、Unix系OS（Solaris等）ではデフォルトで存在しない場合がある
+- `-ltr` にすると**最近更新されたファイルが一番下**に来る
+- つまり「一番下 = 最近更新があったファイル」。障害時にログを探すとき便利
+:::
+
+### システム情報の確認
+
+```bash
+# OS（ディストリビューション）の種類 — 最もOS依存しない方法
+cat /etc/issue
+
+# カーネルのバージョン
+uname -r
+
+# CPUのアーキテクチャ
+uname -m
+# x86_64  → Intel/AMD 64bit（現在の主流）
+# i686    → 32bit x86（古い環境）
+# aarch64 → ARM 64bit（ラズパイ、Apple M1等）
+
+# CPUの種類とコア数
+cat /proc/cpuinfo
+
+# ディスクの空き容量（ファイルシステムの種類付き）
+df -Th
+# -T: ファイルシステムのタイプ表示  -h: 人間が読みやすい単位
+
+# 特定ディレクトリの利用量
+du -sh ディレクトリ名
+# -s: サマリ表示（サブディレクトリを個別表示しない）
+
+# メモリの状況（+ swap）
+free -h
+
+# マシンが忙しいかどうか
+top
+# top 起動中に「1」を入力 → CPUコア別の利用率が見える
+```
+
+### ユーザ・グループの確認
+
+```bash
+$ id
+uid=1000(unixadmin) gid=1000(unixadmin) groups=1000(unixadmin),4(adm),27(sudo)
+```
+
+| 項目 | 意味 |
+|------|------|
+| `uid` | ユーザーID（ユーザーを識別するシステム内部の番号） |
+| `gid` | プライマリグループID |
+| `groups` | 所属している全グループ |
+
+## ネットワーク調査コマンド
+
+### 自ホストのネットワーク設定を確認
+
+```bash
+# IPアドレスの確認（Windowsの ipconfig に相当）
+ip a
+# 出力から inet の行を見る:
+#   inet 192.168.1.xxx/24 ← ローカルIP と サブネットマスク
+
+# ゲートウェイ（ルーティングテーブル）の確認
+ip r
+# または
+route -n    # -n: 名前解決をしない（高速）
+```
+
+`route -n` の出力例と読み方:
+
+```
+Destination     Gateway         Genmask         Flags Iface
+0.0.0.0         172.24.192.1    0.0.0.0         UG    eth0    ← デフォルトルート
+10.10.10.0      192.168.1.1     255.255.255.0   UG    eth1    ← 特定NW用ルート
+172.24.192.0    0.0.0.0         255.255.240.0   U     eth0    ← ローカルサブネット
+```
+
+- **デフォルトルート** (0.0.0.0): 宛先不明のトラフィックは全てこのGWを経由
+- **ゲートウェイが 0.0.0.0**: GWを経由せず直接通信（同一セグメント内）
+
+#### ipcalc: セグメントの確認
+
+```bash
+apt install ipcalc
+ipcalc 192.168.100.14/24
+ipcalc 192.168.100.14 255.255.255.240
+```
+
+ネットマスクによって分割されたネットワークの通信可能範囲（セグメント）をすぐに確認できる。
+
+#### グローバルIPの確認
+
+```bash
+# 自分の端末が外に出ていくときのグローバルIP
+curl ipconfig.io
+curl ifconfig.io
+```
+
+### ping: 疎通確認
+
+```bash
+ping example.com
+# PING example.com (3.163.218.85) 56(84) bytes of data.
+# 64 bytes from ...: icmp_seq=1 ttl=236 time=14.6 ms
+```
+
+| 項目 | 意味 |
+|------|------|
+| `time` | 往復時間（RTT）。1ms = 0.001秒 |
+| `ttl` | Time To Live。L3機器を1つ経由するごとに1減る。0で破棄（ループ防止） |
+
+::: warning ping が返ってこない ≠ 疎通不可
+ファイアウォールがICMPをブロックしていることは普通にある。pingが通らなくてもTCPは通る場合がある。疎通確認は `nc` や `curl` も併用すること。
+:::
+
+#### TTLの基礎値
+
+| OS/機器 | TTL基礎値 |
+|---------|----------|
+| Linux / Unix | 64 |
+| Windows | 128 |
+| ネットワーク機器 | 255 |
+
+> 例: ttl=102 → 128 - 102 = 26 → Windowsサーバーまで26台のL3機器を経由
+
+### netcat (nc): ポートの疎通確認
+
+```bash
+# インストール（openbsd版推奨）
+apt install netcat-openbsd
+
+# クライアント: 特定ポートへの疎通確認
+nc -vz ドメインまたはIP port
+
+# 例: TCP 20〜100番ポートをスキャン
+nc -vz 192.168.1.100 20-100
+# Connection to 192.168.1.100 22 port [tcp/ssh] succeeded!
+# Connection to 192.168.1.100 80 port [tcp/http] succeeded!
+```
+
+| オプション | 意味 |
+|-----------|------|
+| `-v` | 詳細表示 |
+| `-z` | データを送らずに接続確認だけ行う |
+| `-l` | サーバーモード（Listen） |
+| `-k` | 接続終了後も待ち受けを継続 |
+
+```bash
+# サーバー: 簡易的に好きなポートでサーバーを起動（デバッグ用）
+nc -lk 8000
+
+# HTTP レスポンスも見たいなら python モジュールで
+python3 -m http.server 8080
+```
+
+> 特権ポート (0-1023) はroot権限がないとListenできない。
+
+### curl: HTTP通信の調査
+
+HTTPリクエストを送信し、レスポンスを確認するコマンド。
+
+```bash
+# 基本: GETリクエスト
+curl http://127.0.0.1:8000
+
+# 詳細なデバッグ出力（リクエスト/レスポンスヘッダも表示）
+curl -v http://127.0.0.1:8000
+
+# レスポンスヘッダのみ取得
+curl -I http://127.0.0.1:8000
+
+# リダイレクト(3xx)を自動フォロー
+curl -L http://example.com
+
+# プロキシ経由
+curl -x http://proxyserver:port http://example.com
+
+# SSL証明書エラーを無視（自己署名証明書等）
+curl -k https://self-signed.badssl.com/
+
+# ステータスコードだけ取得
+curl -o /dev/null -s -w "%{http_code}\n" http://127.0.0.1:8080
+```
+
+#### よく使うオプション
+
+| オプション | 意味 |
+|-----------|------|
+| `-v` | 詳細出力（デバッグ） |
+| `-I` | HEADリクエスト（ヘッダのみ） |
+| `-L` | リダイレクトをフォロー |
+| `-x` | プロキシ指定 |
+| `-k` | SSL検証を無視 |
+| `-H` | カスタムヘッダ追加 |
+| `-X` | HTTPメソッド指定 |
+| `-d` | POSTデータ送信 |
+| `-u user:pass` | ベーシック認証 |
+| `-A` | User-Agent指定 |
+| `-b` | Cookie送信 |
+| `-s` | サイレントモード |
+| `-w` | カスタムフォーマット出力 |
+
+#### POST リクエスト
+
+```bash
+# フォームデータ
+curl -X POST -d "param1=value1&param2=value2" http://127.0.0.1:8000
+
+# JSON データ
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"key1":"value1", "key2":"value2"}' http://127.0.0.1:8000
+
+# 認証ヘッダ付き
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" http://127.0.0.1:8000
+```
+
+#### -w で使える変数
+
+| 変数 | 意味 |
+|------|------|
+| `%{http_code}` | HTTPステータスコード |
+| `%{time_total}` | 全体のリクエスト時間（秒） |
+| `%{time_namelookup}` | 名前解決にかかった時間 |
+| `%{time_connect}` | 接続確立までの時間 |
+| `%{time_starttransfer}` | 最初のバイトが転送された時間 |
+| `%{size_download}` | ダウンロードされたバイト数 |
 
 ## ファイル転送
 
@@ -638,6 +914,59 @@ graph LR
 
 - **正引き**: ドメイン → IPアドレス
 - **逆引き**: IPアドレス → ドメイン
+
+#### 名前解決の確認コマンド
+
+```bash
+# 基本的な名前解決の確認
+dig example.com +search
+host example.com
+nslookup example.com
+```
+
+結果としてIPアドレスが1つ以上出ていれば、名前が引けているということ。
+
+#### リゾルバの設定
+
+リゾルバ = 名前解決に使うDNSサーバーの情報やサーチドメインの設定。
+
+```bash
+cat /etc/resolv.conf
+# nameserver 192.168.xxx.xxx        ← 参照しているDNSサーバー
+# search internal.example.com onaka.example.com  ← サーチドメイン
+```
+
+```mermaid
+graph LR
+    Client[クライアント] -->|名前を問い合わせ| Cache[DNSキャッシュサーバー]
+    Cache -->|自身で回答| Client
+    Cache -->|スタブゾーン: 身内に聞く| Internal[社内DNSコンテンツサーバー]
+    Cache -->|フォワードゾーン: 丸投げ| Forward[別のDNSサーバー]
+    Cache -.->|上記に無い場合| Root[ルートDNS → コンテンツサーバー群]
+```
+
+::: tip リゾルバが 127.0.0.53 の場合
+nameserverが `127.0.0.53` の場合、ローカルのスタブリゾルバが動いている。実際のDNSサーバーを知るには `/etc/resolv.conf` のコメント行にヒントがある:
+
+```bash
+# Debian/Ubuntu: resolvectl status
+# Mac: scutil --dns
+# WSL: 母艦のWindowsに問い合わせている（172.24.192.1等）
+```
+:::
+
+#### サーチドメイン
+
+FQDNではなく短縮ドメインで入力したとき、自動的にドメインを補完してくれる機能。
+
+```bash
+# search internal.example.com onaka.example.com が設定されている場合
+# "dig server1 +search" で以下を順に試してくれる:
+#   server1.internal.example.com
+#   server1.onaka.example.com
+```
+
+> トラブルを回避したい場合は、短縮ドメインではなく**FQDN**で名前を確認するのが確実。
 
 ```bash
 dig www.example.com
@@ -1085,3 +1414,330 @@ IaaSは自由度が高いが全部自分でやる必要がある。SaaSは簡単
 
 - タダで使えるもの
 - LinuxというOSがOSSに親和性が高い
+
+## サービス・プロセス管理
+
+### netstat: ネットワーク接続の確認
+
+サーバーで「どのポートが開いているか」「誰が接続しているか」を確認する。
+
+```bash
+# 基本: リッスンしているTCPポートを表示
+netstat -ltpn
+
+# UDP も含める
+netstat -ltupn
+
+# 確立済み接続も含めて全て表示
+netstat -ltupna
+```
+
+| オプション | 意味 |
+|-----------|------|
+| `-l` | LISTEN状態のソケットのみ |
+| `-t` | TCPのみ |
+| `-u` | UDPも表示 |
+| `-p` | PID/プログラム名を表示 |
+| `-n` | ホスト名・ポート名を数値で表示 |
+| `-a` | 全ての接続を表示（ESTABLISHEDなども） |
+
+::: warning 一般ユーザ vs root
+一般ユーザで実行すると、自分が起動したプロセスしかPID/Program nameが見えない。全プロセスを見るには `sudo` が必要。
+:::
+
+#### 出力の読み方
+
+```
+Proto Recv-Q Send-Q Local Address       Foreign Address     State       PID/Program name
+tcp        0      0 0.0.0.0:80          0.0.0.0:*           LISTEN      1365/apache2
+tcp        0      0 127.0.0.1:3306      0.0.0.0:*           LISTEN      1546/mysqld
+tcp        0      0 0.0.0.0:22          0.0.0.0:*           LISTEN      1023/sshd
+```
+
+| 項目 | 意味 |
+|------|------|
+| `Proto` | プロトコル (tcp/udp) |
+| `Recv-Q` | 受信キュー（通常0。非ゼロが続くとアプリに問題あり） |
+| `Send-Q` | 送信キュー（通常0。非ゼロが続くと送信側に遅延あり） |
+| `Local Address` | 待ち受けアドレス:ポート |
+| `Foreign Address` | 接続元（LISTEN時は `*`） |
+| `State` | ソケットの状態 |
+| `PID/Program name` | プロセスIDとプログラム名 |
+
+#### Local Address の読み方
+
+| 表示 | 意味 |
+|------|------|
+| `0.0.0.0:80` | 全インターフェースのport 80で待ち受け（外部からアクセス可能） |
+| `127.0.0.1:3306` | ローカルホストのみ。外部からはアクセス不可 |
+| `:::80` | IPv6の全インターフェース |
+
+#### State の種類
+
+| State | 意味 |
+|-------|------|
+| `LISTEN` | 接続を待っている |
+| `ESTABLISHED` | 通信中（3ウェイハンドシェイク完了） |
+| `SYN_SENT` | 接続要求送信中 |
+| `CLOSE_WAIT` | クローズ待ち |
+| `TIME_WAIT` | 接続終了後の待機 |
+
+### lsof: ファイル/ポートを使っているプロセスの特定
+
+「このファイル/ポートを使っているのは誰？」を調べる。
+
+```bash
+# 特定のファイルを開いているプロセスを表示
+sudo lsof /var/log/apache2/access.log
+
+# 特定のポートを使っているプロセスを表示
+sudo lsof -i :80
+# COMMAND     PID     USER   FD   TYPE   DEVICE SIZE/OFF NODE NAME
+# apache2  316077 www-data    4u  IPv6 52882782      0t0  TCP *:http (LISTEN)
+
+# 特定プロセスが開いている全ファイル
+sudo lsof -p PID
+```
+
+> `sudo` をつけないと一般ユーザが確認できる範囲は限られる。
+
+### ps: プロセスの確認
+
+#### ps auxw — リソース使用率を確認
+
+```bash
+ps auxww    # ww で長いコマンドも切れない
+```
+
+| カラム | 意味 |
+|--------|------|
+| `USER` | プロセスの所有者 |
+| `PID` | プロセスID |
+| `%CPU` | CPU使用率 |
+| `%MEM` | メモリ使用率 |
+| `VSZ` | 仮想メモリサイズ |
+| `RSS` | 実メモリ使用量 |
+| `STAT` | プロセスの状態 |
+| `START` | 開始時刻 |
+| `TIME` | CPU使用時間累計 |
+| `COMMAND` | 実行コマンド |
+
+#### ps -ef — 親子関係を確認
+
+```bash
+ps -ef
+```
+
+| カラム | 意味 |
+|--------|------|
+| `UID` | 所有者 |
+| `PID` | プロセスID |
+| `PPID` | **親プロセスID** |
+| `C` | CPU使用率 |
+| `STIME` | 開始時刻 |
+| `CMD` | 実行コマンド |
+
+#### pstree: プロセスのツリー表示
+
+```bash
+# インストール
+apt install psmisc
+
+# 特定PIDの子プロセスをツリー表示
+pstree -p 3449791
+# apache2(3449791)─┬─apache2(316077)─┬─{apache2}(316080)
+#                  │                 ├─{apache2}(316082)
+```
+
+## パーミッション（ファイル権限）
+
+### ファイルの見方
+
+```bash
+ls -l
+# drwxr-xr-x  17 unixadmin unixadmin   4096 May  1 16:15 example-si
+# -rw-r--r--   1 unixadmin unixadmin     54 May 16 11:27 helloworld.py
+```
+
+#### パーミッション文字列の読み方
+
+```
+d rwx r-x r-x
+│  │   │   └── その他ユーザーの権限
+│  │   └────── グループの権限
+│  └────────── 所有者の権限
+└───────────── ファイルタイプ (d=ディレクトリ, -=通常ファイル)
+```
+
+| 文字 | 意味 | 数値 |
+|------|------|------|
+| `r` | 読み取り (read) | 4 |
+| `w` | 書き込み (write) | 2 |
+| `x` | 実行 (execute) | 1 |
+| `-` | 権限なし | 0 |
+
+#### 数値表現
+
+各桁を足し算する:
+- `rwx` = 4+2+1 = **7**
+- `r-x` = 4+0+1 = **5**
+- `r--` = 4+0+0 = **4**
+
+よく見るパターン:
+| 数値 | 文字 | 用途 |
+|------|------|------|
+| `755` | `rwxr-xr-x` | 実行ファイル、ディレクトリ |
+| `644` | `rw-r--r--` | 一般的なファイル |
+| `600` | `rw-------` | 秘密鍵など機密ファイル |
+| `777` | `rwxrwxrwx` | 全員全権限（基本使わない。セキュリティリスク） |
+
+### chmod: 権限の変更
+
+```bash
+# 数値指定（絶対値）
+chmod 755 script.sh      # rwxr-xr-x
+chmod 644 config.txt     # rw-r--r--
+
+# 記号指定（相対値）
+chmod g+r hoge           # グループに読み取り権限を追加
+chmod o-w hoge           # その他ユーザーから書き込み権限を削除
+chmod u+x script.sh      # 所有者に実行権限を追加
+```
+
+| 対象 | 意味 |
+|------|------|
+| `u` | 所有者 (user) |
+| `g` | グループ (group) |
+| `o` | その他 (other) |
+| `a` | 全員 (all) |
+
+`+` で追加、`-` で削除。
+
+### chown: 所有者・グループの変更
+
+```bash
+# 所有者を変更
+sudo chown newuser file.txt
+
+# グループを変更
+sudo chown :newgroup file.txt
+
+# 所有者とグループを同時に変更
+sudo chown newuser:newgroup file.txt
+
+# ディレクトリ以下を再帰的に変更
+sudo chown -R newuser:newgroup /path/to/dir
+```
+
+::: warning 注意
+一般ユーザーは他人のファイルの所有者を変更できない（root/sudo が必要）。これはセキュリティ上の理由。自分のファイルの所有者を他人に変更されると、そのファイルを削除・変更されてしまうため。
+:::
+
+### ファイルシステムへの書き込みテスト
+
+「書き込めるかどうか」を確認するシンプルな方法:
+
+```bash
+touch hoge.txt    # 空ファイルを作成してみる
+# 成功すればファイルシステムは書き込み可能
+# "Read-only file system" エラーが出れば書き込み不可
+```
+
+## sudo: 管理者権限の実行
+
+### sudo が使える条件
+
+`/etc/sudoers` ファイルの設定による。
+
+```bash
+# 自分がどのコマンドをsudoで実行できるか確認
+sudo -l
+```
+
+#### /etc/sudoers の書式
+
+```
+user(または %group)  host=(runas_users:runas_groups)  commands
+```
+
+#### 設定例
+
+```bash
+# rootは全て実行可能
+root    ALL=(ALL:ALL) ALL
+
+# sudoグループのメンバーは全コマンド実行可能
+%sudo   ALL=(ALL:ALL) ALL
+
+# user1にパスワードなしで全コマンドを許可
+user1   ALL=(ALL) NOPASSWD: ALL
+
+# user1にApacheの再起動だけを許可
+user1 ALL=(root) NOPASSWD: /usr/sbin/service apache2 restart
+
+# user2にログの閲覧だけを許可
+user2 ALL=(root) NOPASSWD: /usr/bin/tail /var/log/*
+```
+
+## ログの見方
+
+### 便利なコマンド
+
+#### less: ファイルの閲覧
+
+```bash
+less /var/log/syslog
+less -S /var/log/syslog    # -S: 長い行を改行しない
+less -N /var/log/syslog    # -N: 行番号を表示
+```
+
+#### tail: ファイル末尾の表示
+
+```bash
+tail filename       # デフォルトで最後の10行を表示
+tail -f filename    # リアルタイムでファイルの更新を表示（ログ監視に必須）
+tail -n 50 filename # 最後の50行を表示
+```
+
+#### grep: パターン検索
+
+```bash
+grep 'error' /var/log/syslog           # errorを含む行を表示
+grep -i 'error' /var/log/syslog        # 大文字小文字を区別しない
+grep -r 'pattern' /path/to/dir         # サブディレクトリも含めて再帰検索
+grep -c 'error' /var/log/syslog        # マッチした行数を表示
+grep -v 'debug' /var/log/syslog        # debugを含まない行を表示
+```
+
+#### awk: テキスト処理
+
+フィールド（列）を指定して抽出・加工するコマンド。ログ解析に強い。
+
+```bash
+# 特定フィールドを抽出（apacheアクセスログからIPとステータスコード）
+awk '{print $1, $9}' access.log
+# 172.24.192.1 200
+# 172.24.192.1 404
+
+# 条件でフィルタリング（ステータスコード200の行のみ）
+awk '$9 == 200 {print $0}' access.log
+
+# 合計を算出（レスポンスサイズの合計）
+awk '{sum += $10} END {print sum}' access.log
+
+# 区切り文字を変更（CSV処理）
+awk -F',' '{print $2}' data.csv
+# -F: フィールド区切り文字（デフォルトはスペース/タブ）
+```
+
+### 便利なシェル操作
+
+| キー | 動作 |
+|------|------|
+| `Ctrl + l` | 画面クリア |
+| `Ctrl + r` | コマンド履歴を検索 |
+| `Ctrl + c` | 実行中のコマンドを中断 |
+| `Ctrl + d` | 入力終了（EOF）/ ログアウト |
+| `Ctrl + a` | 行頭に移動 |
+| `Ctrl + e` | 行末に移動 |
+| `Ctrl + w` | カーソル前の単語を削除 |
