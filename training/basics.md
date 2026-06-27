@@ -724,6 +724,9 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" http://127.0.0.1:8000
 | ftp | 21 | 古い。暗号化されていない。絶滅寸前 |
 | sftp | 22 | 暗号化されている。主流 |
 | rsync | - | 同期（sync）ができる。暗号化の有無を選択可能 |
+| ftps | 989,990 | ほぼ使っている人はいない |
+
+rsync の同期イメージ:
 
 ```mermaid
 graph LR
@@ -739,7 +742,6 @@ graph LR
     end
     A3 -->|rsync| B3
 ```
-| ftps | 989,990 | ほぼ使っている人はいない |
 
 ### sftp の使い方
 
@@ -1743,14 +1745,34 @@ IaaSは自由度が高いが全部自分でやる必要がある。SaaSは簡単
 | 表記 | 読み方 |
 |------|--------|
 | vi | ぶいあい |
+| vim | びむ |
 | wget | ダブルゲット |
 | ping | ぴん |
 | etc | エトセ |
 | opt | オプト |
 | var | ばー |
+| tmp | テンプ |
+| src | ソース |
+| bin | ビン |
+| lib | リブ |
+| dev | デブ |
+| proc | プロック |
+| conf | コンフ |
 | apache2 | アパッチ2 |
 | nginx | エンジンエックス |
 | DB | デービー |
+| MySQL | マイエスキューエル |
+| sudo | スードゥー |
+| chmod | チェンジモード (シーエイチモッド) |
+| chown | チェンジオーナー (シーエイチオウン) |
+| CIDR | サイダー |
+| AWS | エーダブリューエス |
+| GCP | ジーシーピー |
+| IaaS | イアース |
+| PaaS | パース |
+| SaaS | サース |
+| LDAP | エルダップ |
+| FQDN | エフキューディーエヌ |
 
 ## 用語辞典
 
@@ -1758,4 +1780,24 @@ IaaSは自由度が高いが全部自分でやる必要がある。SaaSは簡単
 
 - CMS (Contents Management Systems): 簡単にホームページを作れるもの
 - オープンソース
+
+### FQDN (Fully Qualified Domain Name)
+
+- 完全修飾ドメイン名。ホスト名 + ドメイン名の完全な形
+- 例: `www.example.com` (短縮形だと `www` だけ)
+
+### NAT (Network Address Translation)
+
+- プライベートIPをグローバルIPに変換する仕組み
+- 家庭のルーターや企業のファイアウォールが担う
+
+### DHCP (Dynamic Host Configuration Protocol)
+
+- IPアドレスを自動的に割り振る仕組み
+- PCをネットワークに接続すると自動でIPが付与されるのはDHCPのおかげ
+
+### デーモン (daemon)
+
+- バックグラウンドで常時動いているプロセス
+- サービス名の末尾に `d` がつくことが多い（sshd, httpd, mysqld 等）
 
