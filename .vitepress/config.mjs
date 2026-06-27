@@ -22,6 +22,10 @@ export default withMermaid(
             { text: 'NotebookLM', link: '/ai/notebooklm' },
             { text: 'Kiro vs Claude Code CLI', link: '/ai/kiro-vs-claude-code' }
           ]
+        },
+        {
+          text: '育成計画',
+          items: [{ text: 'その他・基礎', link: '/training/basics' }]
         }
       ],
       editLink: {
