@@ -237,6 +237,299 @@ graph LR
 
 > **なぜ必要？** 手動だとミスが起きる。3000ノード以上あるExampleCorpの環境を毎回手動で更新するのは現実的ではない。CIで品質を担保し、CDで安全にリリースする。
 
+## ExampleCorp 環境編
+
+### 各環境のネットワーク構成
+
+```mermaid
+graph TB
+    subgraph 本番環境
+        PROD_VPC[example-prod VPC] <-->|VPC Peering / TGW| PROD_GW[example-gw-prod]
+    end
+    subgraph ステージング環境
+        STG_VPC[example-stg VPC] <-->|VPC Attachment| STG_TGW[Transit Gateway]
+        GCP_DEV[GCP dev] <-->|Cloud VPN| STG_TGW
+    end
+    subgraph 開発環境
+        DEV_VPC[example-dev VPC]
+    end
+    subgraph 拠点
+        Office[オフィス / 曽根崎DC]
+    end
+    Office <-->|SmartVPN 専用線| PROD_GW
+    Office <-->|インターネットVPN| STG_TGW
+```
+
+#### 本番環境
+
+- AWSアカウント間は **VPC Peering** と **Transit Gateway** で相互通信
+- 拠点間は **SmartVPN** (SoftBank DirectAccess専用線) で閉域網通信
+- 帯域: AWS〜SmartVPN **1Gbps**、AWS〜曽根崎iDC **200Mbps**
+- ログイン: EXTPCからAmazon WorkSpaces経由
+
+#### ステージング環境
+
+- example-stg の Transit Gateway にネットワーク接続を集約
+- 帯域: インターネットVPN（ベストエフォート、最大1Gbps）
+- ログイン: EXTPC→EAA経由→高集約ステージングPC
+
+#### 開発環境
+
+- ネットワーク接続性はステージングと同様
+- ログイン:
+  - Windows EXTPC → RDP → 高集約開発PC
+  - Mac EXTPC → IAP → GCP環境 (dev-gcp-step0101z)
+
+#### 共有VPC
+
+複数のAWSアカウントまたはGCPプロジェクトでサブネットを共有する仕組み:
+
+| 環境 | AWS | GCP |
+|------|-----|-----|
+| 本番 | example-gw-prod | example-nw-gw |
+| STG | example-gw-stg | example-nw-gw-stg |
+| 開発 | example-gw-dev | example-nw-gw-dev |
+
+### Proxy の構成
+
+#### Forward Proxy と Reverse Proxy
+
+```mermaid
+graph LR
+    subgraph 社内
+        Client[クライアント] --> FP[Forward Proxy]
+    end
+    FP -->|ログ記録 & 行き先制御| Internet[インターネット]
+    Internet --> RP[Reverse Proxy] --> Server[社内サーバー]
+```
+
+#### なぜ Forward Proxy が必要か
+
+- **ログが残る**: 誰がどこにアクセスしたか記録
+- **行き先を制御できる**: アクセスできる先をコントロール（ACL/ポリシー）
+
+::: warning よく躓くポイント
+- どの環境でも、インターネットに出る場合は **Proxy を経由しないと接続できない**
+- 逆に、同一環境のローカルIP宛には **Proxy を経由すると接続できない**
+:::
+
+#### Proxy の設定方法
+
+```bash
+# Linux
+export http_proxy=http://proxy:3128
+export https_proxy=http://proxy:3128
+export no_proxy=localhost,127.0.0.1,.internal.example.com
+
+# コマンドプロンプト (Windows)
+set http_proxy=http://proxy:3128
+set https_proxy=http://proxy:3128
+set no_proxy=localhost,127.0.0.1,.internal.example.com
+
+# PowerShell
+$env:http_proxy="http://proxy:3128"
+$env:https_proxy="http://proxy:3128"
+$env:no_proxy="localhost,127.0.0.1,.internal.example.com"
+```
+
+> `no_proxy` で指定した宛先には Proxy を経由しない。
+
+#### Proxy の接続確認
+
+```bash
+nc -vz proxy名 3128
+```
+
+#### ExampleCorp の Proxy ポリシー
+
+| 環境 | ポリシー |
+|------|---------|
+| 開発・本番 | 全アクセス許可。**ブラックリスト**に含まれるドメインのみ拒否 |
+| ステージング・倉庫 | 全アクセス拒否。**ホワイトリスト**に追加されたドメインのみ許可 |
+
+> ステージング/倉庫で新しい接続先が必要な場合は **REQSI** で許可依頼を出す。
+
+参考: [利用者ガイド: プロキシサーバーについて](https://wiki.internal.example.com/)
+
+### 管理DNSドメイン
+
+#### 環境ごとにDNSが分離されている
+
+同じドメイン名でも、クライアントがいる環境によって返ってくるIPが異なる仕組み。
+
+```mermaid
+graph TB
+    subgraph 開発環境
+        DevClient[開発PC] -->|example.com?| DevDNS[開発用DNSキャッシュ]
+        DevDNS -->|10.0.1.x| DevClient
+    end
+    subgraph 本番環境
+        ProdClient[本番サーバー] -->|example.com?| ProdDNS[本番用DNSキャッシュ]
+        ProdDNS -->|3.163.218.x| ProdClient
+    end
+```
+
+ややこしい例:
+- `example.com` → 開発にも本番にもある
+- `internal.example.com` → STGにも本番にもある
+
+> DNSレコードの一括確認: [example-org/example-dns-records](https://github.com/example-org/example-dns-records) (日次更新)
+
+参考: [利用者ガイド: DNSドメインについて](https://wiki.internal.example.com/)
+
+### 認証・権限
+
+#### LDAP と sudoers の関係性
+
+```mermaid
+graph LR
+    LM[LDAP Manager<br/>アカウント管理ツール] -->|LDAPプロトコル| LDAP[OpenLDAP<br/>ディレクトリサービス]
+    LDAP -->|ユーザ/グループ情報| Server[Linux サーバー]
+    Server --> Sudoers[sudoers ファイル<br/>権限定義]
+```
+
+- **LDAP Manager**: アカウントを管理する製品（ユーザの作成・グループ管理）
+- **LDAP (OpenLDAP)**: ディレクトリサービスのプロトコル/ミドルウェア
+- **sudoers**: Linuxの権限制御ファイル（どのユーザ/グループが何をできるか）
+
+#### 各VM上でのユーザー権限
+
+| 管理対象 | 管理者 |
+|---------|--------|
+| 個人アカウントID | ITサポートG（入社時に登録） |
+| 各サーバのsudoers設定 | インフラG（Ansible管理） |
+
+よくある事例:
+
+```bash
+# developerユーザにスイッチしたい
+sudo su -iu developer
+
+# できない場合の確認手順:
+sudo -l          # 自分が実行できるsudoコマンドを確認
+id               # 自分の所属グループを確認
+```
+
+#### 所属グループとロール
+
+| グループ | 権限 |
+|---------|------|
+| dev | アプリ開発者（dev/prod環境にログイン可、dev環境はsudo可） |
+| dev-trainee | アプリ開発者見習い（dev環境のみログイン可、sudo不可） |
+| site | サイト関連（インフラGへ申請が必要） |
+| ent | エンタープライズ関連（インフラGへ申請が必要） |
+
+#### 権限の取得方法
+
+| 必要な権限 | 依頼先 |
+|-----------|--------|
+| dev / dev-trainee | アプリ開発管理者（所属グループ長） |
+| site / ent | Questetra チケット（REQSI） |
+| AWSアカウント | REQSI |
+| GCPプロジェクト | 各プロジェクト管理者 |
+
+#### クラウド上の権限
+
+**Google Cloud:**
+- Google Workspacesアカウントに紐づく
+- 権限は各プロジェクトで分散管理
+- 一時権限: PAM（プロジェクト管理者の承認で期限付き強権限を取得）
+
+**AWS:**
+- REQSI でユーザーアカウント申請が必要
+- Okta連携で認証（AWSアクセスポータル経由）
+- 権限はインフラGで集中管理
+- 一時権限: `#sys-aws-permission-request` で申請
+
+#### 社内システムのアクセス制御
+
+| 制御方式 | 説明 |
+|---------|------|
+| 閉域網内 | 基本ツーツー。セキュリティグループ(AWS)/ファイアウォール(GCP)で制御 |
+| IP制限 | WAF/Cloud Armor で特定グローバルIPのみ許可 |
+| ETPヘッダ+認証 | IP制限と併用可能。ヘッダが付与されている場合のみ許可 |
+| 認証Proxy | Googleアカウント認証。GCP: IAP / AWS: Cognito |
+
+### メールサーバ
+
+| 環境 | エンドポイント | 利用ドメイン |
+|------|--------------|-------------|
+| 開発/ステージング | 環境用エンドポイント | `example.test` |
+| 本番 | 本番用エンドポイント | 本番ドメイン |
+
+::: warning 注意
+- 本番では大量送信や宛先間違いに注意
+- メール不達の調査は `#helpdesk-srv-all` へ（個人情報を隠した状態で相談）
+:::
+
+参考: [利用者ガイド: メールサーバーについて](https://wiki.internal.example.com/)
+
+### コスト管理
+
+#### なぜクラウド予算管理が必要か
+
+- 年間IT系部門支出 約70億円のうち、**約10億円**がAWS/GCPクラウド支出
+- 10%予測がずれるだけで**1億円**のずれになる
+- 会社は期初に予算を立ててステークホルダーに宣言しており、乖離時は報告が必要
+
+#### 開発者に求められること
+
+- コスト使用可否は**各部門**で判断（インフラGに権限はない）
+- 予算から乖離した場合は**乖離理由をインフラGに報告**
+- 新サービス追加/既存サービス廃止は**リリース時期をインフラGに連絡**
+
+#### コスト確認方法
+
+| クラウド | レポート | 注意点 |
+|---------|---------|--------|
+| AWS | AWS Cost Report / Cost Explorer | **償却コスト**で確認。ドル表示 |
+| GCP | GCP Cost Report | 為替の影響あり。**ドルベース**で参照推奨 |
+
+### 監視
+
+#### Zabbix
+
+- インフラ側で使用しているOSSの監視ツール
+- URL: https://monitoring.internal.example.com
+- 共通アカウント: MRO_Users（参照権限のみ）
+
+監視できる内容:
+- CPU/メモリ/ディスク使用率（Zabbix agentによる自動登録）
+- 死活監視 (Ping)
+- URL監視
+- ネットワークトラフィック (SNMP)
+
+アラート通知先:
+| チャンネル | 用途 |
+|-----------|------|
+| `#systrouble` | 重大障害 |
+| `#notif-alert` | アラート確認用 |
+| `#notif-warn-srva` | PE II/IOグループ向け |
+
+#### ネットワークトラフィック確認
+
+曽根崎DCからAWS/インターネットとの通信量をZabbixで確認可能。
+
+活用例:
+- 特定時間のバッチが契約帯域内に収まるか確認
+- タイムアウト発生時、回線が詰まっているか確認
+- 開発PCが重い原因がNW問題か確認
+
+> グラフが欠けている/天井に張り付いている場合、契約帯域を超過している可能性あり。
+
+### 相談・依頼窓口
+
+| 相談内容 | 窓口 |
+|---------|------|
+| インフラ全般 | `#helpdesk-srv-infra` |
+| AWS | `#helpdesk-aws` / AWSサポートチケット |
+| AWS (SA直接相談) | `#ex-aws` |
+| GCP | `#helpdesk-gcp` / Google Form |
+| GCP (Google直接相談) | `#ex-google-cloud` |
+| BigQuery | `#helpdesk-bigquery` |
+
+> **迷ったらまず `#helpdesk-srv-infra`** へ。
+
 ## 接続ツール
 
 ### SSH (Secure SHell)
