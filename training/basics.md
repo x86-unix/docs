@@ -373,7 +373,7 @@ graph LR
     Cache -->|自身で回答| Client
     Cache -->|スタブゾーン: 身内に聞く| Internal[社内DNSコンテンツサーバー]
     Cache -->|フォワードゾーン: 丸投げ| Forward[別のDNSサーバー]
-    Cache -.->|上記に無い場合| Root[ルートDNS → コンテンツサーバー群]
+    Cache -.->|上記に無い場合| Root[ルートDNS &#8594; コンテンツサーバー群]
 ```
 
 ::: tip リゾルバが 127.0.0.53 の場合
@@ -560,7 +560,7 @@ graph LR
     Internet[インターネット] --> FW{FW/SG<br/>門番}
     FW -->|port 80,443 許可| Web[Webサーバー]
     FW -->|port 22 社内IPのみ許可| SSH[SSHアクセス]
-    FW -.->|その他 拒否| X[✕ ブロック]
+    FW -.->|その他 拒否| X[X ブロック]
 ```
 
 設定例（考え方）:
@@ -615,15 +615,15 @@ graph TB
         Infra2[インフラ]
     end
     subgraph PaaS
-        App1[アプリケーション ← 自分で管理]
+        App1[アプリケーション - 自分で管理]
         MW1[ミドルウェア]
         OS1[OS]
         Infra1[インフラ]
     end
     subgraph IaaS
-        App0[アプリケーション ← 自分で管理]
-        MW0[ミドルウェア ← 自分で管理]
-        OS0[OS ← 自分で管理]
+        App0[アプリケーション - 自分で管理]
+        MW0[ミドルウェア - 自分で管理]
+        OS0[OS - 自分で管理]
         Infra0[インフラ]
     end
 ```
@@ -1515,7 +1515,7 @@ graph LR
     subgraph サーバーB
         B1[ファイル1]
         B2[ファイル2]
-        B3[ファイル3 ← 同期]
+        B3[ファイル3 - 同期]
     end
     A3 -->|rsync| B3
 ```
