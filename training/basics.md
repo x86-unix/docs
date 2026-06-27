@@ -1459,7 +1459,7 @@ sudo dnf install nginx
 
 ```mermaid
 graph LR
-    subgraph パケットの構造
+    subgraph "パケットの構造"
         Header[ヘッダ<br/>宛先/送信元/制御情報] --> Data[データ<br/>運びたい情報本体]
     end
 ```
@@ -1626,11 +1626,11 @@ ipcalc 192.168.1.0/24
 
 ```mermaid
 graph LR
-    subgraph 地域A<br/>192.168.0.0/24
+    subgraph "地域A 192.168.0.0/24"
         A1[192.168.0.1]
         A2[192.168.0.2]
     end
-    subgraph 地域B<br/>192.168.1.0/24
+    subgraph "地域B 192.168.1.0/24"
         B1[192.168.1.1]
         B2[192.168.1.2]
     end
@@ -1921,10 +1921,10 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph スケールアップ（垂直）
+    subgraph "スケールアップ（垂直）"
         A1[サーバー] -->|パワーアップ| A2[強いサーバー]
     end
-    subgraph スケールアウト（水平）
+    subgraph "スケールアウト（水平）"
         B1[サーバー1]
         B2[サーバー2]
         B3[サーバー3]
@@ -2689,12 +2689,12 @@ rsync の同期イメージ:
 
 ```mermaid
 graph LR
-    subgraph サーバーA
+    subgraph "サーバーA"
         A1[ファイル1]
         A2[ファイル2]
         A3[ファイル3 ★新規]
     end
-    subgraph サーバーB
+    subgraph "サーバーB"
         B1[ファイル1]
         B2[ファイル2]
         B3[ファイル3 - 同期]
@@ -2832,10 +2832,10 @@ grep "error" /var/log/syslog
 
 ```mermaid
 graph LR
-    subgraph インタプリタ
+    subgraph "インタプリタ"
         Src1[ソースコード] --> |1行ずつ翻訳&実行| Result1[結果]
     end
-    subgraph コンパイラ
+    subgraph "コンパイラ"
         Src2[ソースコード] --> |ビルド| Bin[バイナリ]
         Bin --> |実行| Result2[結果]
     end
