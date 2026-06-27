@@ -15,19 +15,19 @@ flowchart LR
     A[ユーザーの質問] --> B[関連ドキュメントを検索]
     B --> C[検索結果 + 質問を LLM に渡す]
     C --> D[ソースに基づいた回答]
-    E[(アップロード済み\nドキュメント)] --> B
+    E[("アップロード済みドキュメント")] --> B
 ```
 
 **通常の LLM との違い:**
 
 ```mermaid
 flowchart TD
-    subgraph 通常のLLM
-        Q1[質問] --> LLM1[LLM] --> A1[回答\n※学習データのみ]
+    subgraph "通常のLLM"
+        Q1[質問] --> LLM1[LLM] --> A1["回答 ※学習データのみ"]
     end
-    subgraph RAG（NotebookLM）
-        Q2[質問] --> Search[検索エンジン] --> LLM2[LLM] --> A2[回答\n※引用付き]
-        DB[(ユーザーの資料)] --> Search
+    subgraph "RAG（NotebookLM）"
+        Q2[質問] --> Search[検索エンジン] --> LLM2[LLM] --> A2["回答 ※引用付き"]
+        DB[("ユーザーの資料")] --> Search
     end
 ```
 
