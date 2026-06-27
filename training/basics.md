@@ -575,14 +575,16 @@ graph LR
 ```mermaid
 graph LR
     subgraph Forward Proxy
-        Client[クライアント] --> FP[Proxy] --> Internet[インターネット]
+        Client[クライアント] --> FP[Proxy]
+        FP --> Internet[インターネット]
     end
 ```
 
 ```mermaid
 graph LR
     subgraph Reverse Proxy
-        Internet2[インターネット] --> RP[Proxy] --> Server[内部サーバー]
+        Internet2[インターネット] --> RP[Proxy]
+        RP --> Server[内部サーバー]
     end
 ```
 
@@ -615,15 +617,15 @@ graph TB
         Infra2[インフラ]
     end
     subgraph PaaS
-        App1[アプリケーション - 自分で管理]
+        App1["アプリケーション - 自分で管理"]
         MW1[ミドルウェア]
         OS1[OS]
         Infra1[インフラ]
     end
     subgraph IaaS
-        App0[アプリケーション - 自分で管理]
-        MW0[ミドルウェア - 自分で管理]
-        OS0[OS - 自分で管理]
+        App0["アプリケーション - 自分で管理"]
+        MW0["ミドルウェア - 自分で管理"]
+        OS0["OS - 自分で管理"]
         Infra0[インフラ]
     end
 ```
@@ -665,11 +667,11 @@ IaaSは自由度が高いが全部自分でやる必要がある。SaaSは簡単
 
 ```mermaid
 graph TB
-    subgraph オンプレミス
+    subgraph "オンプレミス"
         DC[データセンター] --> HW1[物理サーバー]
         DC --> HW2[物理サーバー]
     end
-    subgraph クラウド
+    subgraph "クラウド"
         Internet[インターネット] --> AWS[AWS]
         Internet --> GCP[GCP]
     end
