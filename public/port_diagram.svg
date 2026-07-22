@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500" font-family="sans-serif">
+  <!-- 背景 -->
+  <rect width="700" height="500" fill="#f8f9fa" rx="10"/>
+
+  <!-- タイトル -->
+  <text x="350" y="40" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">192.168.1.1 ポートの役割</text>
+
+  <!-- サーバー本体 -->
+  <rect x="250" y="80" width="200" height="280" rx="15" fill="#2c3e50" stroke="#1a252f" stroke-width="3"/>
+  <text x="350" y="120" text-anchor="middle" font-size="16" fill="#ecf0f1" font-weight="bold">192.168.1.1</text>
+  <text x="350" y="145" text-anchor="middle" font-size="12" fill="#bdc3c7">サーバー</text>
+
+  <!-- ポート 22 (SSH) -->
+  <rect x="280" y="170" width="140" height="40" rx="8" fill="#27ae60" stroke="#1e8449" stroke-width="2"/>
+  <text x="350" y="195" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Port 22</text>
+
+  <!-- ポート 53 (DNS) -->
+  <rect x="280" y="230" width="140" height="40" rx="8" fill="#2980b9" stroke="#1f6da3" stroke-width="2"/>
+  <text x="350" y="255" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Port 53</text>
+
+  <!-- ポート 80 (HTTP) -->
+  <rect x="280" y="290" width="140" height="40" rx="8" fill="#e67e22" stroke="#d35400" stroke-width="2"/>
+  <text x="350" y="315" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Port 80</text>
+
+  <!-- 矢印と説明 - Port 22 -->
+  <line x1="420" y1="190" x2="520" y2="190" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="525" y="165" width="160" height="50" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="605" y="185" text-anchor="middle" font-size="12" fill="#1e8449" font-weight="bold">🔒 SSH</text>
+  <text x="605" y="203" text-anchor="middle" font-size="11" fill="#333">リモート接続・管理</text>
+
+  <!-- 矢印と説明 - Port 53 -->
+  <line x1="420" y1="250" x2="520" y2="250" stroke="#2980b9" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="525" y="225" width="160" height="50" rx="8" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="605" y="245" text-anchor="middle" font-size="12" fill="#1f6da3" font-weight="bold">🌐 DNS</text>
+  <text x="605" y="263" text-anchor="middle" font-size="11" fill="#333">名前解決サービス</text>
+
+  <!-- 矢印と説明 - Port 80 -->
+  <line x1="420" y1="310" x2="520" y2="310" stroke="#e67e22" stroke-width="2" marker-end="url(#arrow-orange)"/>
+  <rect x="525" y="285" width="160" height="50" rx="8" fill="#fdebd0" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="605" y="305" text-anchor="middle" font-size="12" fill="#d35400" font-weight="bold">📄 HTTP</text>
+  <text x="605" y="323" text-anchor="middle" font-size="11" fill="#333">Webサーバー</text>
+
+  <!-- 左側: クライアント -->
+  <line x1="180" y1="250" x2="250" y2="250" stroke="#7f8c8d" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow-gray)"/>
+  <rect x="30" y="215" width="145" height="70" rx="10" fill="#ecf0f1" stroke="#95a5a6" stroke-width="2"/>
+  <text x="102" y="245" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">💻 クライアント</text>
+  <text x="102" y="268" text-anchor="middle" font-size="11" fill="#666">リクエスト送信</text>
+
+  <!-- 下部の説明 -->
+  <rect x="50" y="400" width="600" height="80" rx="10" fill="#eef2f7" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="350" y="425" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">各ポートの概要</text>
+  <text x="80" y="450" font-size="12" fill="#27ae60">● Port 22 (SSH)</text>
+  <text x="80" y="470" font-size="11" fill="#555">  暗号化されたリモートシェル接続</text>
+  <text x="280" y="450" font-size="12" fill="#2980b9">● Port 53 (DNS)</text>
+  <text x="280" y="470" font-size="11" fill="#555">  ドメイン名→IPアドレス変換</text>
+  <text x="490" y="450" font-size="12" fill="#e67e22">● Port 80 (HTTP)</text>
+  <text x="490" y="470" font-size="11" fill="#555">  Webページの配信</text>
+
+  <!-- 矢印マーカー定義 -->
+  <defs>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7f8c8d"/>
+    </marker>
+  </defs>
+</svg>
