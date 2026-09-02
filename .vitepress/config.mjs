@@ -26,6 +26,15 @@ export default withMermaid(
         {
           text: '育成計画',
           items: [{ text: 'その他・基礎', link: '/training/basics' }]
+        },
+        {
+          text: 'Linux',
+          items: [
+            {
+              text: 'Gentoo インストール ハンズオン',
+              link: '/training/gentoo-handson'
+            }
+          ]
         }
       ],
       editLink: {
