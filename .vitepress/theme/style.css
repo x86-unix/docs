@@ -1,0 +1,62 @@
+/* Mermaid 図のクリック拡大モーダル */
+
+/* 図にカーソルを当てるとポインターを表示 */
+.vp-doc .mermaid svg {
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.vp-doc .mermaid svg:hover {
+  opacity: 0.85;
+}
+
+/* モーダル オーバーレイ */
+#mermaid-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.75);
+  cursor: zoom-out;
+  align-items: center;
+  justify-content: center;
+}
+#mermaid-modal.is-open {
+  display: flex;
+}
+
+/* モーダル内の SVG コンテナ */
+#mermaid-modal-content {
+  background: var(--vp-c-bg, #fff);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 92vw;
+  max-height: 92vh;
+  overflow: auto;
+  cursor: default;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+#mermaid-modal-content svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  /* 元サイズの 2 倍まで拡大して表示 */
+  width: min(80vw, 1200px);
+}
+
+/* 閉じるボタン */
+#mermaid-modal-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 10000;
+  padding: 4px 8px;
+}
+#mermaid-modal-close:hover {
+  color: #ccc;
+}
