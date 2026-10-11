@@ -304,15 +304,25 @@ mount --make-slave /mnt/gentoo/run
 chroot /mnt/gentoo /bin/bash
 source /etc/profile    # または . /etc/profile （意味は一緒）
 export PS1="(chroot) ${PS1}"
+```
 
-# 【UEFIの場合】
+chroot 後、**ファームウェアに応じて以下のどちらか一方だけ**を実行する。
+
+**【UEFIの場合】**
+
+```bash
 mkdir /efi
 mount /dev/sda1 /efi
+```
 
-# 【BIOSの場合】（/efi は不要。代わりに /boot をマウントする）
-# mount /dev/sda1 /boot
-# ※ /boot ディレクトリは stage3 展開時点で存在している。
-# ※ これを忘れると make install でカーネルが /boot に入らず起動しない。
+**【BIOSの場合】**
+
+> ⚠️ **必須。忘れると起動しない。**  
+> これを省略すると `make install` でカーネルが `/dev/sda3`（ルート）内の `/boot` に書き込まれ、`/dev/sda1` は空のままになる。GRUB がカーネルを見つけられず起動不能になる。
+
+```bash
+# /boot ディレクトリは stage3 展開時点で既に存在している
+mount /dev/sda1 /boot
 ```
 
 `mount --rbind` / `--bind` の4行は、今動いているインストールメディア（一時的なroot環境）が持っている `/proc` `/sys` `/dev` `/run` を、そのまま `/mnt/gentoo` 配下にも見せかけるための処理です。これをやらずに `chroot` すると、新しい環境の中でハードウェア情報やプロセス情報が空っぽになり、`emerge` やカーネルビルドがまともに動きません。図にすると以下のような関係です。
