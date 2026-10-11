@@ -686,10 +686,13 @@ flowchart TD
 emerge -av sys-kernel/dracut
 ls -l /lib/modules              # バージョン確認
 
-# ⚠️ --no-uefi を必ず付ける
-# dracut の新しいバージョンはデフォルトで UEFI UKI モード（/efi/Default/ に書こうとする）になっており、
-# 付けないと「Directory /efi/Default/xxx does not exist」エラーになる。
-# --no-uefi を指定することで従来の /boot/initramfs-xxx.img 形式で生成される。
+# ⚠️ --no-uefi を必ず付ける（UEFI 環境でも同様）
+# 新しい dracut はデフォルトで UKI（Unified Kernel Image）モードで動作し、
+# /efi/Default/カーネルver/ にファイルを書こうとする。
+# しかし今回は GRUB2 を使って /boot/vmlinuz と /boot/initramfs-xxx.img を
+# 読む構成のため、UKI モードでは grub-mkconfig がファイルを見つけられない。
+# --no-uefi は「BIOS用」という意味ではなく「UKI形式を使わず
+# 従来の /boot/initramfs-xxx.img 形式で生成する」という指定。
 dracut --no-uefi --kver 6.18.52-gentoo    # バージョンは ls -l /lib/modules/ で確認したものに合わせる
 
 ls -ltr /boot/                  # initramfs-xxx.img があるか確認
