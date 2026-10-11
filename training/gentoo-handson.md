@@ -685,7 +685,13 @@ flowchart TD
 ```bash
 emerge -av sys-kernel/dracut
 ls -l /lib/modules              # バージョン確認
-dracut --kver 6.12.41-gentoo    # バージョンを指定して生成
+
+# ⚠️ --no-uefi を必ず付ける
+# dracut の新しいバージョンはデフォルトで UEFI UKI モード（/efi/Default/ に書こうとする）になっており、
+# 付けないと「Directory /efi/Default/xxx does not exist」エラーになる。
+# --no-uefi を指定することで従来の /boot/initramfs-xxx.img 形式で生成される。
+dracut --no-uefi --kver 6.18.52-gentoo    # バージョンは ls -l /lib/modules/ で確認したものに合わせる
+
 ls -ltr /boot/                  # initramfs-xxx.img があるか確認
 ```
 
