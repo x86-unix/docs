@@ -615,13 +615,78 @@ make install
 - **【BIOS の場合】** 4.1節で `mount /dev/sda1 /boot` を実施済みであれば、`/boot` は `sda1` を指しているため、カーネルが `sda1` に書き込まれる。これで正しい。
 
 ##### **5.6 Initramfs（ミニルート）の作成**
-カーネルブート直後かつinitに制御が移る前に必要なファイルをアーカイブから引き込み、ファイルシステムを正しくマウントできるように支援する重要なもう一つのカーネル。全部カーネル内にドライバーが内包されている場合は支援不要だが、ないとシステムが正しく起動できないリスクがある。
+
+###### **initramfs とは何か**
+
+カーネルが起動してから `/sbin/init`（systemd）に制御を渡すまでの間、一時的にメモリ上に展開される**ミニ Linux 環境**のこと。`initramfs` = **init**ial **ram** **f**ile **s**ystem の略。
+
+カーネル本体（`vmlinuz`）だけでは、起動直後に「ルートファイルシステム（`/dev/sda3`）を読みに行く」ことができない。なぜなら、HDD/SSD を読むには**ストレージドライバー**が必要で、そのドライバーがモジュール（`*.ko` ファイル）として `/lib/modules/` に置かれているからだ。しかし `/lib/modules/` はルートファイルシステムの中にある。
+
+> **「ルートをマウントするにはドライバーが必要。でもドライバーはルートの中にある」** という鶏と卵の問題を解決するのが initramfs。
+
+###### **カーネル内蔵（`*`）とモジュール（`M`）の違い**
+
+5.2節・5.3節のカーネルビルドで、各ドライバーを `*`（カーネル内蔵）か `M`（モジュール）か選んだことを思い出してほしい。
+
+| 種別 | 設定 | 保存場所 | 起動時の扱い |
+|------|------|----------|------------|
+| 内蔵 | `*` | `vmlinuz` 本体の中 | カーネル起動と同時に使える |
+| モジュール | `M` | `/lib/modules/カーネルver/*.ko` | 起動後に `modprobe` で読み込む |
+
+`make localyesconfig` を使った今回のビルドでは**ほぼすべてのドライバーが `*`（内蔵）** になっているため、ルートファイルシステムをマウントするのに必要なストレージドライバーもカーネル本体に含まれている。
+
+理論上は「全部内蔵なら initramfs は不要」だが、**実際には以下の理由で作っておくのが無難：**
+
+- dracut が LVM・dm-crypt・RAID など複雑なストレージ構成を自動検出してマウント支援してくれる
+- systemd の早期起動処理（`systemd-udevd` 等）を initramfs 内で動かすことで、デバイス名の確定を確実に行える
+- 将来カーネルを更新したとき、モジュール構成が変わっても initramfs があれば対応しやすい
+
+###### **起動フローと initramfs の位置づけ**
+
+```mermaid
+flowchart TD
+    GRUB["GRUB2\n/boot/grub/grub.cfg を読む"]
+    GRUB -->|"vmlinuz + initramfs を\nメモリに展開"| KernelStart
+
+    subgraph KernelStart["カーネル起動フェーズ"]
+        direction TB
+        K["vmlinuz\n（カーネル本体）"]
+        K -->|"initramfsを\nRAM上に展開"| InitEnv
+
+        subgraph InitEnv["initramfs 環境（RAM上の一時 /）"]
+            direction TB
+            Udev["udevd\nデバイスを認識\n（/dev/sda 等を確定）"]
+            Driver["ストレージドライバー読込\n（モジュールがあれば）"]
+            Mount["ルートFS を\n/dev/sda3 からマウント"]
+            Udev --> Driver --> Mount
+        end
+    end
+
+    Mount -->|"制御を移譲\nRAM上の一時/は破棄"| RealRoot
+
+    subgraph RealRoot["本物の / （/dev/sda3）"]
+        direction TB
+        Systemd["/sbin/init\n（systemd）"]
+        Services["各種サービス起動\nネットワーク・sshd 等"]
+        Systemd --> Services
+    end
+```
+
+###### **今回の構成で initramfs が必要な理由まとめ**
+
+今回は `make localyesconfig` でほぼ全ドライバーを内蔵にしているため、initramfs がなくても起動できる**可能性は高い**。しかし：
+
+1. Proxmox/KVM の仮想ディスクドライバー（`virtio_blk` 等）が M になっているケースがある
+2. systemd の early userspace 処理を通すために dracut が必要な構成もある
+3. **作っておいてデメリットはほぼなく、ないと起動しないリスクだけ残る**
+
+よって **「念のため作る」が正解。**
 
 ```bash
 emerge -av sys-kernel/dracut
 ls -l /lib/modules              # バージョン確認
-dracut --kver 6.12.41-gentoo     # バージョンを指定して生成
-ls -ltr /boot/                  # initramfs があるか確認
+dracut --kver 6.12.41-gentoo    # バージョンを指定して生成
+ls -ltr /boot/                  # initramfs-xxx.img があるか確認
 ```
 
 ---
