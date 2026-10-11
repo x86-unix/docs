@@ -191,16 +191,23 @@ flowchart LR
 
 - **Windows用:** fat, fat32, ntfs, exFAT
 - **Mac用:** exFAT, APFS
-- **Linux用:** (めちゃ昔のlinux はEXT2, EXT3) EXT4, XFS, ReiserFS（何もこだわりが無ければEXT4でよい。落合が好きなのはOpenZFS）。
+- **Linux用:** (めちゃ昔のlinux はEXT2, EXT3) EXT4, XFS, ReiserFS（何もこだわりが無ければEXT4でよい。筆者が好きなのはOpenZFS）。
 
 ※同じOSでもフォーマット複数あるのはなぜ？ ＝仕様が違う（取り扱うサイズとか、ジャーナル機能有無とか）
 
 ```bash
+# 【UEFIの場合】
 # 1. EFI環境の場合のESPフォーマット (FAT系列でないとUEFIがブートローダーを見つけられない)
 mkfs.fat -F32 /dev/sda1
 
 # 2. ルート領域のフォーマット (Linuxが得意とする形式)
+mkfs.ext4 /dev/sda3
+
+# 【BIOSの場合】
+# 1. /boot 用フォーマット (ext4)
 mkfs.ext4 /dev/sda1
+
+# 2. ルート領域のフォーマット
 mkfs.ext4 /dev/sda3
 ```
 ※EFI環境: Proxmoxで構築時に「UEFI」を選択した場合
@@ -298,11 +305,14 @@ chroot /mnt/gentoo /bin/bash
 source /etc/profile    # または . /etc/profile （意味は一緒）
 export PS1="(chroot) ${PS1}"
 
-# UEFIの場合のマウント
+# 【UEFIの場合】
 mkdir /efi
 mount /dev/sda1 /efi
 
-# (※BIOSの場合のマウント例: mount /dev/sda1 /boot)
+# 【BIOSの場合】（/efi は不要。代わりに /boot をマウントする）
+# mount /dev/sda1 /boot
+# ※ /boot ディレクトリは stage3 展開時点で存在している。
+# ※ これを忘れると make install でカーネルが /boot に入らず起動しない。
 ```
 
 `mount --rbind` / `--bind` の4行は、今動いているインストールメディア（一時的なroot環境）が持っている `/proc` `/sys` `/dev` `/run` を、そのまま `/mnt/gentoo` 配下にも見せかけるための処理です。これをやらずに `chroot` すると、新しい環境の中でハードウェア情報やプロセス情報が空っぽになり、`emerge` やカーネルビルドがまともに動きません。図にすると以下のような関係です。
